@@ -33,10 +33,10 @@
 % • What is the scope of your work?
 % • What is included in the scope and what is outside the scope?
 
-\section{Research Strategy}
-Since this project began with concrete requirements of an offline AVT application, my research focused on current solutions, determining the benefits and drawbacks of each in order to find features that are either missing from, or are highly successful within these solutions. During meetings with staff at different UK healthcare institutions, I demonstrated the current features while explaining features not yet implemented to gain insight into additional features they would recommend for this application. I would then discuss these features with my internal and external supervisors to determine the scope and priority of any new feature ideas. 
+% \section{Research Strategy}
+% Since this project began with concrete requirements of an offline AVT application, my research focused on current solutions, determining the benefits and drawbacks of each in order to find features that are either missing from, or are highly successful within these solutions. During meetings with staff at different UK healthcare institutions, I demonstrated the current features while explaining features not yet implemented to gain insight into additional features they would recommend for this application. I would then discuss these features with my internal and external supervisors to determine the scope and priority of any new feature ideas. 
 
-Regarding research within the project itself, I tested the top 3 rated LLM models with a parameter limit of 10 billion on a synthetic patient-doctor conversation dataset containing a ground truth summarisation. By ranking these 3 models and their quantisation levels of fp16, int8 and int4 and their average inference times, I systematically determined the most effective model. I also compared different approaches to ensure that the 4 ML models and multitude of libraries required to meet all requirements by finding the limitations for each library and determining whether they could be hosted on a mutually compatible platform.
+% Regarding research within the project itself, I tested the top 3 rated LLM models with a parameter limit of 10 billion on a synthetic patient-doctor conversation dataset containing a ground truth summarisation. By ranking these 3 models and their quantisation levels of fp16, int8 and int4 and their average inference times, I systematically determined the most effective model. I also compared different approaches to ensure that the 4 ML models and multitude of libraries required to meet all requirements by finding the limitations for each library and determining whether they could be hosted on a mutually compatible platform.
 
 \section{Background Information}
 \subsection{OpenVINO}
@@ -46,12 +46,10 @@ The Intel Open Visual Inference and Neural Network Optimization (OpenVINO) toolk
 The Intel AIPC series was launched in December 2023 transitioning away from the old architectures of seperately dedicated CPU, GPU and RAM components and moving towards a SOC design where the previous components and new Neural Processing Unit (NPU) all live on the same combined chip stack by the release of the Lunar Lake series in late 2024\cite{intel_meteor_lake_2023}. The NPU was a new computational unit specialised for low power matrix computation, a perfect device for small ML models\cite{intel_lunar_lake_2024}. Overall, this resulted in a performance-per-watt increase of 229\% compared to pre-December 2023 enabling a low power and high performance device\cite{intel_core_ultra_series_2_deck_2024}. Paired with the native OpenVINO inference engine, the Intel AIPC is a perfect candidate to provide a proof-of-concept for locally hosted ML pipelines.
 
 \subsection{AVT}
-AVT is an umbrella term for the field of passive automated note taking during conversations. By capturing raw audio and using a speech-to-text model, then handling speaker diarisation followed by natural language processing or generative AI, an AVT solution captures an end-to-end pipeline of audio in to summary out\cite{lakhani_ai_scribes_2025}. This has been extended into the medical sector, using specialised speech-to-text and summarisation models to produce standardised medical documentation from a medical conversation\cite{tortus_product_2026}.
-
-3 sentences instead of list 
+AVT is an umbrella term for the field of passive automated note taking during conversations. The standard pipeline begins by capturing raw audio and using a speech-to-text model to create a text transcription of the conversation. Next, a speaker diarisation model is used to add speaker labels to create a full labelled transcript. Finally, natural language processing or generative AI is used to extract useful information from the given transcript, which is then presented to the next stage of an application. This creates an end-to-end pipeline of audio in to summary out\cite{lakhani_ai_scribes_2025}. This pipeline has been extended into the medical sector, using specialised speech-to-text and summarisation models to produce standardised medical documentation from a medical conversation\cite{tortus_product_2026}.
 
 \subsection{RAG}
-RAG
+Retrieval Augmented Generation
 
 \subsection{Project Ambience (LLMedic)}
 The prequel to this project, developed over the summer 2025 at UCL, harnessed the power of Intel's GAUDI compute servers to host the Med42-70B model for medical summarisations (CITATION HERE). The Intel GAUDI server hosted at UCL uses a purpose built AI architecture featuring a deep learning accelerator relying on matrix multiplication engines and tensor processing cores\cite{intel_gaudi3_2025}. Although this project acted as a proof-of-concept for running large AI models on Intel servers, the main drawback was the hosting architecture, leading to this project handling that limitation by moving all models to an on-device solution\cite{intel_openvino_gaudi_aipc_2024}.
@@ -77,9 +75,9 @@ Nuance Dragon Ambient eXperience (DAX) Copilot is an ambient AI solution by Nuan
 This is a very well rounded solution harnessing the power of Microsoft's cloud computing to create a central knowledge bank which can be automatically updated and queried. Again similar to the previous solutions, there is no native capability to handle remote consultations where a stable wifi connection and hospital network access is difficult and not guaranteed.
 
 \subsubsection{Conclusion}
-To conclude, although solutions in this field already exist, our unique approach of a completely offline open-source approach with the addition of integrating medical guidelines positions this project in a unique area negating the drawbacks of requiring network and server setup or proprietary devices along with the benefits of a complete guarantee regarding the safety of sensitive medical data. After researching for completely offline on-device solutions, none were found for a clinical application. By attempting to capture the many benefits of these different applications while maintaining an offline solution, this project will act as a proof of concept for locally hosted AI solutions within the healthcare sector.
+To conclude, although solutions in this field already exist, our unique approach of a completely offline open-source approach with the addition of integrating medical guidelines positions this project in a unique area negating the drawbacks of requiring network and server setup or proprietary devices along with the benefits of a complete guarantee regarding the safety of sensitive medical data. After researching for completely offline on-device solutions, none were found for a clinical application. By attempting to capture the many benefits of these different applications while maintaining an offline solution, this project will act as a proof of concept for locally hosted AI solutions within the healthcare sector. Unfortunately due to the scope of this project, integration into current EPR system is unfeasible due to the legal challenges they create.
 
-\section{Application Implementation Models, Frameworks and Libraries}
+\section{Platforms, Models, Frameworks and Libraries}
 Given the strict requirements of this project, the selection of development tools, frameworks, and libraries demanded careful evaluation. This planning phase was critical to avoid structural incompatibilities when bridging the application's many components. 
 
 \subsection{Platform Selection}
@@ -120,7 +118,7 @@ To gain better understanding of the different libraries in the program, here is 
 
 Before the application is uploaded to the Microsoft Store:
 \begin{enumerate}
-    \item The models are converted to OpenVINO IR format and quantised to int4 model weights using OpenVINO optimum-cli
+    \item The models are converted to OpenVINO IR format and quantised to int4 model weights using OpenVINO `optimum-cli`
 \end{enumerate}
 
 Before a conversation begins:
