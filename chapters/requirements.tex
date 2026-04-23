@@ -1,0 +1,301 @@
+\chapter{Requirements and Analysis}
+This chapter elaborates on the problem introduced previously, derives a structured set of requirements from that problem, and analyses those requirements to inform the first-pass design of the application. Requirements were initially set after the introductory meeting with Costas Stylianou, then gathered iteratively through meetings with my internal supervisor (Prof.\ Dean Mohamedally), external supervisor (Costas Stylianou, Intel), and demonstrations to clinicians at NHS healthcare institutions throughout the project.
+
+\section{Detailed Problem Statement}
+Clinical documentation in UK primary care is a significant source of administrative time and burnout. GPs routinely spend a substantial portion of their working day updating Electronic Patient Records (EPR) systems, writing referral letters, and recording consultation notes. During consultations, note taking divides the clinician's attention between the patient and their method of note taking, reducing face-to-face interaction and overall consultation quality. Existing ambient voice technology (AVT) solutions such as TORTUS AI, Heidi Health, and Nuance DAX Copilot address this problem, but all depend on cloud infrastructure. This introduces three recurring barriers to adoption in NHS settings: the complexity of network and firewall configuration within each trust, the compliance of transmitting sensitive patient data over external networks, and the inability to function during home visits or in locations without a stable internet connection.
+
+This project aims to build an open source proof of concept Windows application that records, transcribes, diarises, and summarises patient-doctor consultations entirely on-device harnessing the power of Intel AIPC hardware. The application must also allow clinicians to upload medical guidance documents and retrieve the most relevant sections based on the conversation summary using a Retrieval Augmented Generation (RAG) pipeline. By running all processing locally, the application eliminates network dependencies and simplifies data protection compliance as patient data never leaves the device.
+
+The scope of this project is a functional proof-of-concept. It is not intended to be a production ready clinical tool, however it must be sufficiently robust and performant to demonstrate the feasibility of offline AVT in a clinical context. The application must be packaged as a native Windows Store application using the MSIX platform, built with WinUI3/C++ and have all models optimised with Intel's OpenVINO SDK.
+
+\section{Requirements}
+
+Requirements are organised into four categories: general requirements covering project-level constraints and deliverables, technical requirements specifying platform and hardware constraints, functional requirements describing what the application must do, and non-functional requirements specifying quality attributes the application must exhibit prioritised with the MoSCoW system. Each requirement is assigned a unique identifier for traceability.
+
+\subsection{General Requirements}
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{ID} & \textbf{Requirement} \\
+\midrule
+G1 & The application must be delivered as a proof-of-concept demonstrating the feasibility of offline clinical AVT on Intel AI PC hardware. \\
+G2 & The application must be publishable to the Microsoft Windows Store as an MSIX packaged application. \\
+G3 & Video demonstrations and presentations must be delivered to clients and supervisors on request, tailored to the target audience and iteratively refined based on feedback. \\
+G4 & Workshops and presentations at relevant events must be attended to gather feedback from healthcare professionals and promote the project. \\
+G5 & The application must be designed with extensibility in mind so that future developers can build upon this proof-of-concept towards an industry ready product. \\
+G6 & All source code must be hosted on GitHub with a branching strategy that supports parallel feature development and rollback. \\
+\bottomrule
+\end{tabularx}
+\caption{General requirements}
+\label{tab:general-reqs}
+\end{table}
+
+\subsection{Technical Requirements}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{ID} & \textbf{Requirement} \\
+\midrule
+T1 & The front-end must be built with WinUI3 using XAML for the UI layer and C++/WinRT for the application logic. \\
+T2 & The back-end inference pipeline must use Intel's OpenVINO toolkit to execute all machine learning models on-device. \\
+T3 & The target hardware platform is an Intel AI PC with a minimum of 32\,GB system RAM, 18\,GB VRAM, and an integrated NPU. \\
+T4 & All machine learning models must be converted to OpenVINO Intermediate Representation (IR) format and quantised to int4 or int8 weight precision prior to distribution. \\
+T5 & The application must operate entirely offline with zero network communication to external services during all use cases. \\
+T6 & The development environment must be Microsoft Visual Studio with the MSIX packaging toolchain. \\
+T7 & A pre-trained medical LLMs with no more than 10 billion parameters must be evaluated and selected to fit within the memory constraints of T3. \\
+T8 & The speech-to-text model must be from the Whisper family due to OpenVINO's native \texttt{WhisperPipeline} support. \\
+T9 & The application must record a conversation and process the audio stream in real time, providing building the transcription live during the conversation. \\
+T10 & The concurrent architecture must allow all models to run simultaneously in memory to avoid loading overheads. \\
+T11 & The doctor's voice embedding must be encrypted.
+\bottomrule
+\end{tabularx}
+\caption{Technical requirements}
+\label{tab:technical-reqs}
+\end{table}
+
+\subsection{Functional Requirements}
+
+Functional requirements are prioritised using the MoSCoW method. \textit{Must Have} requirements define the minimum viable product. \textit{Should Have} requirements add significant value but are not blocking. \textit{Could Have} requirements are desirable extensions that fall outside the core scope.
+
+\subsubsection{Must Have}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{ID} & \textbf{Requirement} \\
+\midrule
+F1 & The user must be able to select an audio input device from any microphone connected to the laptop, including the built-in microphone as default. \\
+F2 & The application must diarise the conversation by labelling each transcribed segment as either \texttt{[Doctor]} or \texttt{[Patient]}, based on a pre-recorded voice embedding of the doctor. \\
+F3 & The user must be able to record their voice before a consultation to generate the voice embedding used for diarisation. \\
+F4 & The recorded voice embedding must be saved and encrypted locally for use in future conversation. \\
+F5 & On completion of a conversation, the application must generate a clinical summary of the diarised transcript using a pre-trained medical LLM. \\
+F6 & The user must be able to save the transcript and summary to a user-specified location on the local file system. \\
+F7 & A default save location must be available for the user to select. \\
+F8 & The relevant NICE Guidelines must be highlighted based on the summary. \\
+F9 & The user must be able to remove previously uploaded medical guidance documents. \\
+F10 & After summarisation, the application must retrieve and display the sections of uploaded medical guidance most relevant to the consultation summary, using a semantic search pipeline. \\
+F11 & Retrieved guidance must be displayed within an embedded PDF viewer with the relevant sections visually highlighted. \\
+F12 & The application must provide clear visual feedback during long-running operations (transcription, summarisation, guidance retrieval) so the user is aware of the current processing state. \\
+F13 & The application must provide a responsive, intuitive Windows-native user interface suitable for clinicians with varying levels of technical proficiency. \\
+F14 & A help section with a guidance on how to use the application, and an information section with the relevant legal disclaimers and model information must be accessible through the application. \\
+\bottomrule
+\end{tabularx}
+\caption{Functional requirements (Must Have)}
+\label{tab:func-must}
+\end{table}
+
+\subsubsection{Should Have}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{ID} & \textbf{Requirement} \\
+\midrule
+F15 & The user should be able to create appraisal entries from a completed summarisation, attaching free-text notes and tags to each entry. \\
+F16 & Appraisal entries should be searchable by name and filterable by tag. \\
+F17 & The user should be able to view, edit, and delete individual appraisal entries, and delete all entries at once. \\
+F18 & The application should support the upload and semantic searching of non-NICE medical guidance PDFs alongside NICE guidelines. \\
+\bottomrule
+\end{tabularx}
+\caption{Functional requirements (Should Have)}
+\label{tab:func-should}
+\end{table}
+
+\subsubsection{Could Have}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{ID} & \textbf{Requirement} \\
+\midrule
+F19 & Multi-lingual transcription and translation support during conversation. \\
+F20 & Voice recording of post-consultation notes appended to the transcript. \\
+F21 & A patient-facing plain-language summary generated alongside the clinical summary. \\
+F22 & A voice-activated trigger (e.g.\ ``Hey Ambience'') to begin recording without pressing a button. \\
+F23 & Integration with EPR systems to export summaries directly into patient records. \\
+\bottomrule
+\end{tabularx}
+\caption{Functional requirements (Could Have)}
+\label{tab:func-could}
+\end{table}
+
+\subsection{Non-Functional Requirements}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{ID} & \textbf{Category} & \textbf{Requirement} \\
+\midrule
+NF2 & Performance & Summary generation must complete within 90 seconds of the conversation ending for a consultation of up to 15 minutes. \\
+NF3 & Performance & Semantic search over uploaded guidance documents must return results within 3 seconds. \\
+NF4 & Performance & The UI must remain responsive (no freezing or dropped frames) during all background processing operations including recording, transcription, and summarisation. \\
+NF5 & Performance & The application must start and load all ML models into memory within 60 seconds of launch. \\
+NF6 & Security & All persisted data (transcripts, summaries, appraisal entries, voice embeddings) must be encrypted at rest on the local file system. \\
+NF7 & Security & The application must make zero outbound network requests during operation, ensuring patient data never leaves the device. \\
+NF8 & Security & Deletion of appraisal entries and associated data must be permanent and non-recoverable. \\
+NF9 & Usability & The interface must be navigable by clinicians with no prior training, using standard Windows UI conventions and clear labelling. \\
+NF10 & Usability & All primary workflows (start recording, stop recording, view summary, view guidance) must be achievable within three clicks from the main screen. \\
+NF11 & Reliability & The application must handle errors during model inference (e.g.\ out-of-memory) gracefully, displaying an informative error message without crashing. \\
+NF12 & Maintainability & The codebase must follow a modular architecture with separation between UI, audio processing, model inference, and data persistence layers to support future extension. \\
+NF13 & Portability & The application must run on any Intel AIPC meeting the hardware specification in T3 without requiring manual driver or dependency installation by the end user. \\
+\bottomrule
+\end{tabularx}
+\caption{Non-functional requirements}
+\label{tab:nfr}
+\end{table}
+
+\section{Requirement Analysis}
+
+The defined requirements were analysed to identify the key data entities, user workflows, and architectural constraints that would inform the design of the application. This section documents that analysis and the reasoning behind the early design decisions it produced.
+
+\subsection{Data Entities}
+Working through the functional requirements, 7 core data entities that the application needs to manage:
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{Data Entity} & \textbf{Description \& Requirements} \\
+\midrule
+Audio buffers & Raw audio captured from the microphone in real time into an audio buffer, consumed by the transcription pipeline and discarded after processing. No long-term storage is needed since the transcript serves as the persistent record (F2). \\
+Transcripts & Speaker-labelled text segments are produced during recording. These grow incrementally as the conversation progresses and are finalised when recording stops (F2, F3, F6). \\
+Summaries & Clinical summaries generated from the finalised transcript by the Med42-8B model. Each summary is associated with exactly one transcript (F5, F6). \\
+Voice embeddings & A fixed-length vector representing the doctor's voice, computed once during enrolment and reused across all subsequent conversations for diarisation. This must be encrypted on device (F3, F4, NF6). \\
+Guidance documents & User-uploaded PDF files. Each document is chunked into text segments, and each segment has a corresponding dense vector embedding and bounding box coordinates mapping it back to a location in the source PDF (F7, F8, F9, F10). \\
+Appraisal entries & Structured records containing a name, summary text, free-text notes, one or more tags, and a creation timestamp stored in a JSON format. These must support search and filtering (F15, F16, F17). \\
+User preferences & Configuration state including the selected microphone device and default save location. (F1, F6) \\
+\bottomrule
+\end{tabularx}
+\caption{Data entities and storage requirements}
+\label{tab:data-entities}
+\end{table}
+
+This breakdown led to a split storage strategy. Guidance document metadata, text chunks, embeddings and bounding boxes are well-suited to a relational schema and are stored in an SQLite database. Large binary objects (PDF files, model weights) remain on the file system within the sandbox of the MSIX packaged project platform. Audio buffers, transcripts and summarisations are transient and held only in memory unless saved by the user to their specified save location.
+
+\subsection{User Workflow Analysis}
+I traced the primary user workflows through the functional requirements to determine how many distinct views the application needs and what each view must support.
+
+\subsubsection{Conducting a consultation (F1--F6, F12)}
+The clinician selects a microphone, starts recording, and conducts the consultation. When the consultation ends, the clinician stops recording and the summary is generated. The clinician reviews both the transcript and summary and optionally saves them. This workflow requires a single primary view with recording controls, a "recording in progress" pane, a summary pane, and status indicators.
+
+\subsubsection{Retrieving medical guidance (F7-F10)}
+After summarisation, the clinician navigates to a guidance view from the summarisation view where the most relevant sections of their uploaded medical guidance are listed by relevance. Selecting a result opens the corresponding PDF with the matched section highlighted. This requires a split-panel view: a ranked result list on the left and an embedded PDF viewer on the right.
+
+\subsubsection{Managing appraisals (F15--F17)}
+The clinician creates an appraisal entry from a the summarisation view, adding notes and tags. They can later return to browse, search, edit, or delete entries from any view in the application. This requires a dedicated view with a searchable and filterable grid of appraisal cards and dialog-based CRUD operations.
+
+\subsubsection{Modifying persistent settings (F1, F3, F7, F14)}
+The clinician wishes to change the default save location, microphone input or re-record the voice embedding. This can be achieved with a flyout settings menu, with the settings icon persisting in the top corner throughout the application. 
+
+\subsection{Threading and Real-Time Constraints}
+Requirements F2 and NF1 demand that audio is captured and transcribed with no more than 5 seconds of latency, while NF4 requires the UI to remain responsive throughout. On a single thread this is impossible as model inference would block the UI thread. Furthermore, the Med42-8B summarisation model must be permenantly loaded onto the GPU as load times are upwards of 15 seconds. I therefore propose the following concurrency architecture
+
+\begin{itemize}
+    \item A \textbf{UI thread} managed by the WinRT framework, handling all rendering and user interaction.
+    \item An \textbf{audio capture thread} that continuously reads from the microphone and fills a shared buffer throughout the conversation.
+    \item A \textbf{transcription thread} that consumes buffered audio, runs inference via Whisper-Medium then diarisation via ECAPA-TDNN, and dispatches labelled text back into a buffer in UI thread.
+    \item A \textbf{summarisation thread} that loads the Med42-8B summarisation model into the GPU from program launch, then runs Med42-8B inference after the conversation ends, dispatching the result to the UI thread on completion.
+    \item A \textbf{RAG thread} that computes the summary embedding, queries the HNSWLib index, and retrieves matched guidance chunks.
+\end{itemize}
+
+The first 4 threads must run concurrently during a conversation. The RAG thread then runs sequentially after the conversation ends but must still execute off the UI thread to maintain responsiveness. Communication between threads and the UI thread uses the WinUI3 dispatcher to safely update UI elements from background threads.
+
+This threading model also maps naturally onto the heterogeneous compute resources of the Intel AI PC: the transcription model runs on the CPU, summarisation runs on the GPU, and the diarisation model and embeddings model runs on NPU.
+
+\subsection{Offline Constraint Implications}
+The offline requirement (T5, NF7) has cascading implications across the architecture:
+
+\begin{itemize}
+    \item All four ML models (Whisper-Medium, ECAPA-TDNN, Med42-8B, MedCPT) and their weights must be bundled with the application at install time and loaded from local storage.
+    \item No client-server database is needed. SQLite runs in-process with zero configuration, which satisfies both the offline constraint and the portability requirement (NF13).
+    \item The RAG index must be built and queried locally. HNSWLib provides in-memory approximate nearest neighbour search without requiring a server process, based on the MedCPT embeddings generated.
+    \item There is no telemetry, crash reporting, or update mechanism that contacts an external server. Updates are distributed through the Microsoft Store's standard MSIX update channel.
+\end{itemize}
+
+\subsection{Security Considerations}
+Requirements NF6-NF8 establish the data protection baseline. Since all data remains on-device, the primary threat model concerns unauthorised local access to the machine (e.g.\ a lost or stolen laptop). The following precautions must be taken to ensure external access to data within the application is safe.
+
+\begin{itemize}
+    \item Transcripts, summaries, and appraisal entries stored in the SQLite database must be encrypted. The MSIX application sandbox provides some isolation, but explicit encryption adds a defence in depth layer.
+    \item The voice embedding file must also be encrypted, as it constitutes biometric data.
+    \item The ``Delete All Appraisals'' operation (F17) must overwrite data rather than simply marking records as deleted, to prevent forensic recovery (NF8).
+\end{itemize}
+
+\section{Requirements Traceability Matrix}
+
+Table~\ref{tab:rtm} maps each requirement to the design decisions and system components that address it. This provides forward traceability from requirements to design, ensuring every requirement has a corresponding implementation strategy and no design decision exists without a motivating requirement.
+
+\begin{longtable}{l p{5.2cm} p{6.8cm}}
+\toprule
+\textbf{Req.} & \textbf{Design Decision} & \textbf{Realising Component(s)} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Req.} & \textbf{Design Decision} & \textbf{Realising Component(s)} \\
+\midrule
+\endhead
+\midrule
+\multicolumn{3}{r}{\textit{Continued on next page}} \\
+\bottomrule
+\endfoot
+\bottomrule
+\caption{Requirements traceability matrix mapping requirements to design decisions and components.}
+\label{tab:rtm}
+\endlastfoot
+G1 & Proof-of-concept scope; offline-first architecture & Full application pipeline \\
+G2 & MSIX packaging with WinUI3 & Visual Studio MSIX project template \\
+G5 & Modular architecture with separated concerns & Layered component structure (UI, inference, data) \\
+G6 & Git branching strategy & GitHub repository with feature branches \\
+\midrule
+T1 & Native Windows front-end & WinUI3 XAML views, C++/WinRT code click and state handlers \\
+T2 & On-device inference engine & OpenVINO C++ API \\
+T3 & Hardware based model selection & Int4/int8 quantised models sized for 32\,GB RAM, 18\,GB VRAM target device \\
+T4 & Pre-distribution quantisation pipeline & OpenVINO \texttt{optimum-cli} conversion \\
+T5 & No network calls; all models bundled locally & Bundled model weights in MSIX package; SQLite in-process database; HNSWLib in-memory index \\
+T7 & Sub-10B parameter constraint & Med42-8B selected after benchmarking \\
+T8 & Whisper family constraint & Whisper-Medium via OpenVINO \texttt{WhisperPipeline} \\
+\midrule
+F1 & Device enumeration at startup & MiniAudio.h device listing API \\
+F2 & Streaming audio capture with real-time transcription & Audio capture thread $\rightarrow$ shared buffer $\rightarrow$ transcription thread running Whisper-Medium and ECAPA-TDNN \\
+F3 & Cosine similarity of voice embeddings & ECAPA-TDNN model comparing per-segment embeddings against enrolled doctor embedding \\
+F4 & Voice enrolment workflow & Dedicated UI dialog, ECAPA-TDNN embedding computation, encrypted local storage of embedding \\
+F5 & Post-conversation LLM inference & Summarisation thread running Med42-8B on GPU via OpenVINO \\
+F6 & File save dialog & Windows native file picker via WinRT API \\
+F7, F8 & Document management UI & Guidance view with upload/delete controls, SQLite metadata table, file-system PDF storage \\
+F10 & Semantic search pipeline & MedCPT embedding of summary $\rightarrow$ HNSWLib ANN query against guidance embeddings \\
+F11 & Embedded PDF viewer with highlighting & MuPDF rendering with bounding-box overlays \\
+F12 & Async processing with UI feedback & Progress indicators and status text updated from background threads via WinUI3 dispatcher \\
+F13 & Three-view navigation structure & NavigationView with Recording, Appraisals, and Guidance pages \\
+F15-F17 & Appraisal CRUD with tagging & JSON appraisals storage, tag filtering and sorting, dialog-based CRUD modifications \\
+F18 & Generic PDF support in RAG & MedCPT chunking and embedding pipeline applied to any uploaded PDF, not only NICE documents \\
+\midrule
+NF1 & Streaming transcription with $\leq$5\,s latency & Dedicated transcription thread; Whisper-Medium int8 on CPU; buffered audio segments \\
+NF2 & Summary within 90\,s & Med42-8B int4 on GPU; prompt engineering to constrain output length \\
+NF3 & Guidance retrieval within 3\,s & Pre-indexed HNSWLib graph; MedCPT embedding computation \\
+NF4 & UI never blocks & Multi-threaded architecture, all inference initiated off the UI thread, dispatcher-based UI updates \\
+NF5 & Startup model loading within 60\,s & Early model loading on application launch in background threads \\
+NF6 & Encryption at rest & Encrypted voice embedding file \\
+NF7 & Zero outbound network traffic & No HTTP/socket calls in codebase, MSIX sandbox network isolation \\
+NF8 & Secure deletion & Data overwrite on delete operations rather than soft-delete \\
+NF9, NF10 & Intuitive three-click workflows & Standard WinUI3 controls, NavigationView, minimal dialog depth \\
+NF11 & Graceful error handling & Try-catch around OpenVINO inference calls, user-facing error dialogs \\
+NF12 & Modular codebase & Separated UI layer, audio module, inference module, data-access module \\
+NF13 & No manual dependency install & All dependencies bundled in MSIX package \\
+\end{longtable}
+
+\section{Use Cases}
+
+The application targets any clinical consultation where a doctor and patient interact verbally and a written record is required afterward. The following use cases illustrate the two primary deployment contexts.
+
+\subsection{Use Case 1: A GP Consultation}
+A GP opens the application on their Intel AIPC at the start of a clinical session. The application loads the ML models during startup. Before the first patient enters, the GP records a short voice sample to register their voice embedding for diarisation. When the patient arrives, the GP clicks \textit{New Recording} and selects the laptop's built-in microphone. When the consultation ends, the GP clicks \textit{Finish Recording}. The application generates a clinical summary, and the GP reviews it alongside the transcript. The GP then navigates to the Guidance view, where the application highlights the most relevant NICE guideline sections based on the summary. The GP saves the transcript and summary to a local folder for later entry into the EPR system. If applicable, the GP creates an appraisal entry with notes and tags for their professional development portfolio.
+
+\subsection{Use Case 2: A Home Visit Consultation}
+A GP conducts a home visit where no internet connection is available. Because the application runs entirely offline, the full pipeline functions identically to a surgery consultation. The GP uses the laptop microphone to record the conversation. After the visit, the GP reviews the summary and guidance results. On returning to the surgery, the GP saves the outputs and transfers them to the EPR system. This use case demonstrates the core differentiator of this application over existing cloud-dependent solutions.

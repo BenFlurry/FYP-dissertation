@@ -1,0 +1,92 @@
+\documentclass[a4paper]{report}
+\usepackage{setspace}
+%\usepackage{subfigure}
+
+\pagestyle{plain}
+\usepackage{amssymb,graphicx,color}
+\usepackage{amsfonts}
+\usepackage{latexsym}
+\usepackage{amsmath}
+\usepackage[a4paper, margin = 3cm, bottom = 2.5cm]{geometry}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{longtable}
+
+\newtheorem{theorem}{THEOREM}
+\newtheorem{lemma}[theorem]{LEMMA}
+\newtheorem{corollary}[theorem]{COROLLARY}
+\newtheorem{proposition}[theorem]{PROPOSITION}
+\newtheorem{remark}[theorem]{REMARK}
+\newtheorem{definition}[theorem]{DEFINITION}
+\newtheorem{fact}[theorem]{FACT}
+
+\newtheorem{problem}[theorem]{PROBLEM}
+\newtheorem{exercise}[theorem]{EXERCISE}
+\def \set#1{\{#1\} }
+
+\newenvironment{proof}{
+PROOF:
+\begin{quotation}}{
+$\Box$ \end{quotation}}
+
+
+
+\newcommand{\nats}{\mbox{\( \mathbb N \)}}
+\newcommand{\rat}{\mbox{\(\mathbb Q\)}}
+\newcommand{\rats}{\mbox{\(\mathbb Q\)}}
+\newcommand{\reals}{\mbox{\(\mathbb R\)}}
+\newcommand{\ints}{\mbox{\(\mathbb Z\)}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\title{{\vspace{-14em} \includegraphics[scale=0.4]{ucl_logo.png}}\\
+{{\Huge Clinical Summarisation and Advice for Intel AIPC}}\\
+{\large Optional Subtitle}\\
+}
+\date{Submission date: 1st May 2026}
+\author{22004608\thanks{
+{\bf Disclaimer:}
+This report is submitted as part requirement for the MY DEGREE at UCL. It is
+substantially the result of my own work except where explicitly indicated in the text.
+\emph{Either:} The report may be freely copied and distributed provided the source is explicitly acknowledged
+\newline  %% \\ messes it up
+\emph{Or:}\newline
+The report will be distributed to the internal and external examiners, but thereafter may not be copied or distributed except with permission from the author.}
+\\ \\
+Meng Computer Science\\ \\
+Prof. Dean Mohamedally (UCL), Costas Stylianou (Intel)}
+
+
+
+\begin{document}
+ 
+\onehalfspacing
+\maketitle
+
+\pagenumbering{roman}
+\begin{abstract}
+\input{chapters/abstract}
+\end{abstract}
+
+\input{chapters/thanks}
+
+\tableofcontents
+\clearpage
+\pagenumbering{arabic}
+
+\include{chapters/introduction}
+\include{chapters/context}
+\include{chapters/requirements}
+\include{chapters/design_implementation}
+
+\appendix
+
+\bibliographystyle{unsrt}
+\bibliography{main}
+
+\chapter{Other appendices, e.g., code listing}
+Put your appendix sections here
+
+\end{document}

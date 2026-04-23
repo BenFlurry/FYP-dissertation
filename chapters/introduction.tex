@@ -1,0 +1,66 @@
+\chapter{Introduction}
+
+This project sits at the intersection of clinical administration, on-device machine learning, and Windows application engineering. The goal is not to build a finished clinical product in a single academic year; it is to answer a narrower and more useful question: can a native Windows application running on an Intel AI PC record a consultation, transcribe it, identify the speaker, generate a usable clinical summary, and retrieve relevant medical guidance without sending patient data off the device?
+
+That question matters because most current ambient documentation tools depend on cloud infrastructure. Products such as TORTUS AI, Heidi Health, and Nuance DAX Copilot demonstrate that there is strong demand for automated clinical documentation, but they also inherit the practical constraints of networked deployment, integration work, and external data handling \cite{tortus_product_2026,heidi_product_2026,dictationdirect_dax_features_2026}. For an NHS setting, those constraints are non-trivial; they shape how a tool is implemented and trialled. An offline proof of concept therefore offers a concrete way to test a different deployment method rather than simply reproducing an existing one.
+
+\section{Problem Overview}
+
+In a consultation, documentation competes directly with attention. A doctor needs to listen, ask follow-up questions, reason about symptoms, and still produce a record that is accurate  for later clinical use. The usual consultation flow is as follows: type during the appointment, take notes on paper, or reconstruct the encounter afterwards from memory. None of these options is ideal. Typing during the consultation interrupts eye contact and changes the rhythm of the conversation. Writing notes afterwards is slow and risks losing detail.
+
+The central idea of this project is to shift the administrative work into an on-device pipeline. The application records the conversation, transcribes and diarises (labelling sentences as doctor or patient) in real time, then produces a clinical summary after the consultation and searches uploaded guidance documents for relevant medical guidelines. In practical terms, that means the output is not just a block of text. It is a transcript, a summary, and a link back to guidance that may help the clinician justify or check what was discussed.
+
+Running the full pipeline locally introduces its own problems. Large language models are expensive to run. Real-time transcription competes with the user interface for CPU and memory. Speaker diarisation must be good enough to be useful, not merely plausible. Retrieval has to be quick, otherwise it becomes one more waiting step in an already busy workflow. The system also has to fit into the constraints of the target platform, a native Windows Store application built with the MSIX packaged project platform and deployed as an MSIX package on Intel AIPC hardware.
+
+Those technical constraints are required to ensure this project remains within the niche of the market. By relaxing these challenges, it no longer answers the question the project is set out to investigate
+
+\section{Aims}
+The project has three main aims.
+
+\begin{itemize}
+    \item Evaluate whether the selected models and libraries are fast enough and accurate enough to support that workflow in practice.
+    \item Build a working proof of concept for offline clinical summarisation on Intel AI PC hardware, with a native Windows user interface and an entirely local inference pipeline.
+    \item Produce a codebase and architecture that can be extended after the project, rather than a one-off demonstration that is difficult to maintain.
+\end{itemize}
+
+A personal secondary aim is established based on the project requirements. The majority of my development experience throughout my university journey is with Python and VSCode. The technical constraints of this project provide the opportunity to learn the C++ programming language, the Visual Studio environment and the MSIX Packaged Project platform. 
+
+\section{Goals}
+
+From those aims, I defined the following concrete project goals:
+
+\begin{itemize}
+    \item Compare candidate pretrained medical large language models (LLMs) under different quantisation levels and select a summarisation model that is feasible on the target hardware
+    \item Implement a real-time transcription pipeline using Whisper together with a diarisation model based on a pre-recorded voice embedding
+    \item Build a retrieval pipeline that allows clinicians to upload medical guidance PDFs and locate relevant sections from the generated consultation summary
+    \item Provide a Windows-native interface for recording, reviewing outputs, selecting and saving external files, and browsing retrieved guidance
+    \item Structure the application so that new features, such as appraisal support or EPR integration, can be added without major rewrites.
+\end{itemize}
+
+These goals are intentionally narrower than the long-term ambitions of the product idea. For example, direct EPR integration, multilingual support, and patient-facing summaries are useful extensions, but they are not required to establish whether the core offline pipeline is viable.
+
+\section{Development Methodology}
+
+The project was developed iteratively. Early work focused on feasibility rather than presentation. Before spending time on interface design, I needed to evaluate whether the core inference pipeline could run within the required hardware and still respond quickly enough to be usable. That led to a back-end-first approach. I tested candidate models, measured inference times, and ruled out options that were either too slow or too large for the target device.
+
+Once the broad technical direction was stable, development proceeded in short cycles built around weekly meetings with my external supervisor and regular discussion with my internal supervisor and the NHS clients. Generally, these meetings ensured that our visions and expectations for a highly flexible project remained aligned. More specifically, these meetings ensured scope was corrected, priorities were re-evaluated and weak ideas were dropped before too much development time was absorbed. When feature requirements and constraints were uncertain, I communicated my understanding of the feature and requested my supervisor to steer me in the direction they originally intended to gain a mutual understanding of what was required to meet the specific feature they required. This communication varied depending on the requirement. For example, to communicate my understanding of the appraisals requirement, I implemented a rough UI as per my vision and gathered feedback on specific sorting and tagging features I originally misunderstood.
+
+Version control was central to this process. The project was maintained on GitHub, which made it practical to isolate experiments, preserve stable versions for demonstrations, and revert changes when a promising approach had fundamental flaws that required a reset to fix. That mattered most when integrating several highly linked libraries simultaneously with very different potential points of failure.
+
+This way of working was less tidy than a purely linear plan, but it suited the project. A proof-of-concept system with several unknowns and multiple added or amended requirements is best built by resolving the most expensive uncertainties early and maintaining a stable baseline of the application to be iterated from.
+
+\section{Overview}
+
+The remainder of this report is organised as follows.
+
+Chapter 2 reviews the background to the project, surveys comparable systems, and explains the choice of models, frameworks, and supporting libraries.
+
+Chapter 3 defines the project requirements in detail and analyses the consequences of those requirements for the system architecture, data model, workflows, and stakeholder responsibilities.
+
+Chapter 4 describes the design of the application, including the structure of the main components and the reasoning behind the major architectural decisions.
+
+Chapter 5 explains the implementation of the system and discusses how the design was realised in code.
+
+Chapter 6 presents the testing and evaluation strategy, summarises the evidence gathered during development, and identifies the main limitations of the current proof of concept.
+
+Chapter 7 concludes the report by reviewing the project against its original goals, critically evaluating the resulting system, and outlining the most important directions for future work.

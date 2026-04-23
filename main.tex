@@ -1,0 +1,84 @@
+\documentclass[a4paper]{report}
+\usepackage{setspace}
+%\usepackage{subfigure}
+
+\pagestyle{plain}
+\usepackage{amssymb,graphicx,color}
+\usepackage{amsfonts}
+\usepackage{latexsym}
+\usepackage{amsmath}
+\usepackage[a4paper, margin = 3cm, bottom = 2.5cm]{geometry}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{url}
+
+
+\newtheorem{theorem}{THEOREM}
+\newtheorem{lemma}[theorem]{LEMMA}
+\newtheorem{corollary}[theorem]{COROLLARY}
+\newtheorem{proposition}[theorem]{PROPOSITION}
+\newtheorem{remark}[theorem]{REMARK}
+\newtheorem{definition}[theorem]{DEFINITION}
+\newtheorem{fact}[theorem]{FACT}
+
+\newtheorem{problem}[theorem]{PROBLEM}
+\newtheorem{exercise}[theorem]{EXERCISE}
+\def \set#1{\{#1\} }
+
+\newenvironment{proof}{
+PROOF:
+\begin{quotation}}{
+$\Box$ \end{quotation}}
+
+
+
+\newcommand{\nats}{\mbox{\( \mathbb N \)}}
+\newcommand{\rat}{\mbox{\(\mathbb Q\)}}
+\newcommand{\rats}{\mbox{\(\mathbb Q\)}}
+\newcommand{\reals}{\mbox{\(\mathbb R\)}}
+\newcommand{\ints}{\mbox{\(\mathbb Z\)}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\title{
+% {\vspace{-14em} \includegraphics[scale=0.4]{ucl_logo.png}}\\
+{{\Huge Clinical Summarisation for Intel AIPC}}\\
+{\large UCL and Intel IXN Project for the NHS}\\
+}
+\date{Submission date: April 26th 2026}
+\author{Benjamin Alexander\thanks{
+{\bf Disclaimer:}
+This report is submitted as part requirement for the MEng Computer Science course at UCL. It is
+substantially the result of my own work except where explicitly indicated in the text.
+\newline
+\emph{Either:} The report may be freely copied and distributed provided the source is explicitly acknowledged
+\newline  %% \\ messes it up
+\emph{Or:}
+The report will be distributed to the internal and external examiners, but thereafter may not be copied or distributed except with permission from the author.}
+\\ \\
+MEng Computer Science\\ \\
+Prof. Dean Mohamedally (Internal)\\
+Costas Stylianou (External)}
+
+
+
+\begin{document}
+ 
+\onehalfspacing
+\maketitle
+\begin{abstract}
+\input{chapters/abstract}
+\end{abstract}
+\tableofcontents
+\setcounter{page}{1}
+
+\include{chapters/introduction}
+\include{chapters/context}
+\include{chapters/requirements}
+\include
+
+\bibliographystyle{unsrturl}
+\bibliography{main.bib}
+
+\end{document}
