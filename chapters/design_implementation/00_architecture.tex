@@ -1,0 +1,178 @@
+\section{Design Summary}
+To map the bigger picture of the design of this application, here are the top level diagrams for the application UI flow, UI state and concurrency diagrams
+
+\section{Application Architecture}
+\label{sec:app-architecture}
+
+The application comprises four concurrent threads — RAG, Summarisation, UI, and Transcription — each responsible for a distinct subsystem. At program start the UI thread spawns the three worker threads, each of which loads the models required for its subsystem. Figure~\ref{fig:concurrency-diagram} shows the interactions between threads across the four phases of the application lifecycle.
+
+\begin{landscape}
+\begin{figure}[H]
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[
+    >=Stealth,
+    event/.style={circle, fill=black, inner sep=0pt, minimum size=6pt},
+    arr/.style={->, semithick},
+    x=1.0cm, y=1.0cm,
+]
+
+%% Lane y-coordinates (centre of each 2.5-unit band)
+\def\yRAG{8.75}
+\def\ySumm{6.25}
+\def\yUI{3.75}
+\def\yTrans{1.25}
+
+%% Lane boundary lines  (total width ~42)
+\foreach \y in {0, 2.5, 5, 7.5, 10}
+    \draw[cyan!70!blue, thick] (0, \y) -- (42.0, \y);
+
+%% Lane labels
+\node[anchor=east, font=\Large, align=right] at (-0.2, \yRAG)   {RAG\\thread};
+\node[anchor=east, font=\Large, align=right] at (-0.2, \ySumm)  {Summarisation\\thread};
+\node[anchor=east, font=\Large, align=right] at (-0.2, \yUI)    {UI\\thread};
+\node[anchor=east, font=\Large, align=right] at (-0.2, \yTrans) {Transcription\\thread};
+
+%% Phase separator lines
+\foreach \x in {11.0, 21.0, 33.0}
+    \draw[densely dashed, gray!60] (\x, 10.7) -- (\x, -0.5);
+
+%% Phase labels
+\node[font=\large\itshape] at (5.5,  11.1) {Program start};
+\node[font=\large\itshape] at (16.0, 11.1) {Start recording};
+\node[font=\large\itshape] at (27.0, 11.1) {Stop recording};
+\node[font=\large\itshape] at (37.5, 11.1) {View guidance};
+
+%%====================================================================
+%% PHASE 1 — Program start: UI spawns the three worker threads
+%%====================================================================
+
+\node[event] (U0)  at (1.5, \yUI)    {};
+
+%% UI → RAG
+\node[event] (R0)  at (3.5, \yRAG)   {};
+\node[font=\small, above=4pt] at (R0) {load MedCPT (NPU)};
+\draw[arr] (U0) -- (R0);
+
+%% UI → Summarisation
+\node[event] (S0)  at (3.5, \ySumm)  {};
+\node[font=\small, above right=4pt, align=left] at (S0) {load Med42-8B (GPU)};
+\draw[arr] (U0) -- (S0);
+
+%% UI → Transcription
+\node[event] (Tr0) at (3.5, \yTrans) {};
+\node[font=\small, below=4pt, align=center] at (Tr0)
+    {load ECAPA-TDNN\\+ Whisper (CPU)};
+\draw[arr] (U0) -- (Tr0);
+
+%% UI → UI View
+\node[event] (V_loading) at (3.5, \yUI) {};
+\node[font=\small, above=4pt, align=center] at (V_loading)
+    {View:\\loading application};
+\draw[arr] (U0) -- (V_loading);
+%% Transcription: models finished loading
+\node[event] (Tr_ready) at (7.5, \yTrans) {};
+\node[font=\small, below=4pt] at (Tr_ready) {models loaded};
+\draw (Tr0) -- (Tr_ready);
+
+%% Transcription → UI: signals models loaded
+\node[event] (U_modload) at (8.0, \yUI) {};
+\node[font=\small, above=4pt, align=center] at (U_modload) {View:\\ready to record};
+\draw[arr] (Tr_ready) -- (U_modload);
+\draw[arr] (V_loading) -- (U_modload);
+
+
+%%====================================================================
+%% PHASE 2 — Start recording
+%%====================================================================
+
+%% UI: user presses start recording → signals Transcription directly
+\node[event] (U_srec) at (14.0, \yUI) {};
+\node[font=\small, above=4pt, align=center] at (U_srec) {start recording\\pressed};
+\draw[arr] (U_modload) -- (U_srec);
+
+\node[event] (V_recording) at (17.5, \yUI) {};
+\draw[arr] (U_srec) -- (V_recording);
+\node[font=\small, above=4pt, align=center] at (V_recording) {View:\\recording};
+
+%% Transcription: receives signal from UI, begins transcribing
+\node[event] (Tr_sig) at (17.5, \yTrans) {};
+\draw[arr] (U_srec) -- (Tr_sig);
+\node[font=\small, below=4pt] at (Tr_sig) {start transcription};
+\draw[arr] (Tr_ready) -- (Tr_sig); %% horizontal: models loaded → start transcription
+
+%%====================================================================
+%% PHASE 3 — Stop recording
+%%====================================================================
+
+%% UI: stop recording pressed → signals Transcription
+\node[event] (U_stop) at (21.5, \yUI) {};
+\node[font=\small, above=4pt, align=center] at (U_stop) {stop recording\\pressed};
+\draw[arr] (V_recording) -- (U_stop); %% horizontal: View: recording → stop recording pressed
+
+%% Transcription: receives stop signal, sends back accumulated buffer
+\node[event] (Tr_send) at (25.0, \yTrans) {};
+\draw[arr] (U_stop) -- (Tr_send);
+\node[font=\small, below=4pt, align=center] at (Tr_send)
+    {complete \& send\\transcription};
+\draw[arr] (Tr_sig) -- (Tr_send);
+
+%% UI: show the generating summarisation view
+\node[event] (V_gensum) at (25.0, \yUI) {};
+\draw[arr] (U_stop) -- (V_gensum);
+\node[font=\small, above=4pt, align=center] at (V_gensum)
+    {View:\\generating\\summarisation};
+
+%% Transcription → Summ: dispatch transcription directly
+\node[event] (S_stop) at (28.5, \ySumm) {};
+\node[font=\small, above=4pt] at (S_stop) {summarise};
+\draw[arr] (Tr_send) -- (S_stop)
+    node[pos=0.5, below right=3pt, font=\small] {dispatch transcription};
+\draw[arr] (S0) -- (S_stop); %% horizontal: load Med42-8B → summarise
+
+%% Summ: summarisation complete
+\node[event] (S_summ) at (31.0, \ySumm) {};
+\node[font=\small, above=4pt] at (S_summ) {summary complete};
+\draw (S_stop) -- (S_summ);
+
+%% Summ → UI: sends summary back to UI
+\node[event] (U_recv) at (32.5, \yUI) {};
+\node[font=\small, below=4pt, align=center] at (U_recv) {View:\\summarisation};
+\draw[arr] (S_summ) -- (U_recv);
+
+%% V_gensum → U_recv: UI transitions directly to summarisation view
+\draw[arr] (V_gensum) -- (U_recv);
+
+%%====================================================================
+%% PHASE 4 — View guidance
+%%====================================================================
+
+%% UI: user presses view guidance → goes directly to RAG
+\node[event] (U_view) at (35.5, \yUI) {};
+\node[font=\small, below=4pt, align=center] at (U_view)
+    {view guidance\\pressed};
+\draw[arr] (U_recv) -- (U_view);
+\draw[arr] (S_summ) -- (U_recv);
+
+%% RAG: receives request directly from UI
+\node[event] (R_embed) at (36.5, \yRAG) {};
+\node[font=\small, above=4pt] at (R_embed) {embed/lookup};
+\draw[arr] (U_view) -- (R_embed);
+\draw[arr] (R0) -- (R_embed); %% horizontal: load MedCPT → embed/lookup
+
+%% RAG: performs lookup, result ready
+\node[event] (R_done) at (39.5, \yRAG) {};
+\node[font=\small, above=4pt] at (R_done) {send guidance};
+\draw[arr] (R_embed) -- (R_done);
+
+%% RAG → UI: returns found guidance
+\node[event] (U_done) at (41.0, \yUI) {};
+\node[font=\small, below=4pt, align=center] at (U_done) {View:\\medical };
+\draw[arr] (R_done) -- (U_done);
+
+\end{tikzpicture}%
+}
+\caption{Concurrency diagram illustrating thread interactions across the four phases of the application lifecycle.}
+\label{fig:concurrency-diagram}
+\end{figure}
+\end{landscape}
