@@ -1,11 +1,3 @@
-\section{Design Summary}
-To map the bigger picture of the design of this application, here are the top level diagrams for the application UI flow, UI state and concurrency diagrams
-
-\section{Application Architecture}
-\label{sec:app-architecture}
-
-The application comprises four concurrent threads — RAG, Summarisation, UI, and Transcription — each responsible for a distinct subsystem. At program start the UI thread spawns the three worker threads, each of which loads the models required for its subsystem. Figure~\ref{fig:concurrency-diagram} shows the interactions between threads across the four phases of the application lifecycle.
-
 \begin{figure}[H]
 \centering
 \resizebox{\linewidth}{!}{%
@@ -20,13 +12,13 @@ The application comprises four concurrent threads — RAG, Summarisation, UI, an
 ]
 
 %% Lane y-coordinates (centre of each 4-unit band)
-\def\yRAG{14}
-\def\ySumm{10}
-\def\yUI{6}
-\def\yTrans{2}
+\def\yRAG{17}
+\def\ySumm{12}
+\def\yUI{7}
+\def\yTrans{3}
 
 %% Lane boundary lines (compressed total width ~36)
-\foreach \y in {0, 4, 8, 12, 16}
+\foreach \y in {0, 5, 10, 15, 20}
     \draw[cyan!70!blue, very thick] (0, \y) -- (36.0, \y);
 
 %% Lane labels (with tightened newlines)
@@ -35,15 +27,15 @@ The application comprises four concurrent threads — RAG, Summarisation, UI, an
 \node[lane label] at (-0.5, \yUI)    {UI\\[-0.5ex]thread};
 \node[lane label] at (-0.5, \yTrans) {Transcription\\[-0.5ex]thread};
 
-%% Phase separator lines
+%% Phase separator lines (EXTENDED TO 21.0 TO MATCH NEW HEIGHT)
 \foreach \x in {9.0, 16.0, 29.0}
-    \draw[densely dashed, gray!60, thick] (\x, 16.5) -- (\x, -0.5);
+    \draw[densely dashed, gray!60, thick] (\x, 21.0) -- (\x, -0.5);
 
 %% Phase labels
-\node[phase label] at (4.5,  17.0) {Program start};
-\node[phase label] at (12.5, 17.0) {Start recording};
-\node[phase label] at (22.5, 17.0) {Stop recording};
-\node[phase label] at (32.5, 17.0) {View guidance};
+\node[phase label] at (4.5,  22.0) {Program start};
+\node[phase label] at (12.5, 22.0) {Start recording};
+\node[phase label] at (22.5, 22.0) {Stop recording};
+\node[phase label] at (32.5, 22.0) {View guidance};
 
 %%====================================================================
 %% PHASE 1 — Program start
@@ -56,15 +48,16 @@ The application comprises four concurrent threads — RAG, Summarisation, UI, an
 \draw[arr] (U0) -- (R0);
 
 \node[event] (S0)  at (3.0, \ySumm)  {};
-\node[event label, above=6pt] at (S0) {load Med42-8B (GPU)};
+%% ADDED xshift HERE TO MOVE TEXT RIGHT
+\node[event label, above=6pt, xshift=1.8cm] at (S0) {load Med42-8B (GPU)};
 \draw[arr] (U0) -- (S0);
 
 \node[event] (Tr0) at (3.0, \yTrans) {};
-\node[event label, below=6pt] at (Tr0) {load ECAPA-TDNN\\[-0.5ex]+ Whisper (CPU)};
+\node[event label, below=6pt] at (Tr0) {load\\ECAPA-TDNN\\[-1ex]+ Whisper (CPU)};
 \draw[arr] (U0) -- (Tr0);
 
 \node[event] (V_loading) at (3.5, \yUI) {};
-\node[event label, above=6pt] at (V_loading) {View:\\[-0.5ex]loading application};
+\node[event label, above=6pt] at (V_loading) {View:\\[-0.5ex]loading app};
 \draw[arr] (U0) -- (V_loading);
 
 \node[event] (Tr_ready) at (6.0, \yTrans) {};
@@ -97,26 +90,26 @@ The application comprises four concurrent threads — RAG, Summarisation, UI, an
 %% PHASE 3 — Stop recording
 %%====================================================================
 
-\node[event] (U_stop) at (18.0, \yUI) {};
+\node[event] (U_stop) at (17.0, \yUI) {};
 \node[event label, above=6pt] at (U_stop) {stop recording\\[-0.5ex]pressed};
 \draw[arr] (V_recording) -- (U_stop);
 
-\node[event] (Tr_send) at (21.0, \yTrans) {};
+\node[event] (Tr_send) at (20.0, \yTrans) {};
 \draw[arr] (U_stop) -- (Tr_send);
 \node[event label, below=6pt] at (Tr_send) {complete \& send\\[-0.5ex]transcription};
 \draw[arr] (Tr_sig) -- (Tr_send);
 
-\node[event] (V_gensum) at (21.0, \yUI) {};
+\node[event] (V_gensum) at (20.0, \yUI) {};
 \draw[arr] (U_stop) -- (V_gensum);
 \node[event label, above=6pt] at (V_gensum) {View:\\[-0.5ex]generating\\[-0.5ex]summarisation};
 
-\node[event] (S_stop) at (24.0, \ySumm) {};
+\node[event] (S_stop) at (23.0, \ySumm) {};
 \node[event label, above=6pt] at (S_stop) {summarise};
-\draw[arr] (Tr_send) -- (S_stop) node[pos=0.5, below right=2pt, font=\Large] {dispatch transcription};
+\draw[arr] (Tr_send) -- (S_stop) node[pos=0.5, below right=2pt, font=\Large] {};
 \draw[arr] (S0) -- (S_stop);
 
 \node[event] (S_summ) at (26.0, \ySumm) {};
-\node[event label, above=6pt] at (S_summ) {summary complete};
+\node[event label, above=6pt, align=center] at (S_summ) {send\\summary};
 \draw[arr] (S_stop) -- (S_summ);
 
 \node[event] (U_recv) at (27.5, \yUI) {};
@@ -132,17 +125,17 @@ The application comprises four concurrent threads — RAG, Summarisation, UI, an
 \node[event label, below=6pt] at (U_view) {view guidance\\[-0.5ex]pressed};
 \draw[arr] (U_recv) -- (U_view);
 
-\node[event] (R_embed) at (31.5, \yRAG) {};
-\node[event label, above=6pt] at (R_embed) {embed/lookup};
+\node[event] (R_embed) at (31, \yRAG) {};
+\node[event label, above=6pt, align=center] at (R_embed) {embed \&\\lookup};
 \draw[arr] (U_view) -- (R_embed);
 \draw[arr] (R0) -- (R_embed);
 
 \node[event] (R_done) at (34.0, \yRAG) {};
-\node[event label, above=6pt] at (R_done) {send guidance};
+\node[event label, above=6pt] at (R_done) {send\\guidance};
 \draw[arr] (R_embed) -- (R_done);
 
 \node[event] (U_done) at (35.5, \yUI) {};
-\node[event label, below=6pt] at (U_done) {View:\\[-0.5ex]medical};
+\node[event label, below=6pt] at (U_done) {View:\\[-1ex]guidance};
 \draw[arr] (R_done) -- (U_done);
 
 \end{tikzpicture}%
