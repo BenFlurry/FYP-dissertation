@@ -46,8 +46,48 @@
 % This is a core chapter in your report and will usually be quite substantial, 10
 % pages or more.
 
-For the ease of the reader, the design and implementation will follow the chronological path of the application. As per a typical software engineering project, after the requirements mapping and feasibility study was conducted, each component of the application was designed, then implemented in an iterative format. This chapter will follow this pattern to show the journey the project took from a simple summarisation engine prototype to a full Microsoft Store application.
+For the ease of the reader, the design and implementation will provide an overview of the system architecture to better position the rest of this chapter's chronological path of the application development. As per a typical software engineering project, after the requirements mapping and feasibility study was conducted, each component of the application was designed, then implemented in an iterative format. This chapter will follow this pattern to show the journey the project took from a simple summarisation engine prototype to a full Microsoft Store application.
 
+\section{Application Design Overview}
+\subsection{Concurrency}
+To begin, the largest factor of the design of the application is the concurrency pipeline. This design ensures that lengthy model loading and inference times remain separate from each other and the main UI thread to ensure the application remains responsive and model inference remains timely. Based on the project requirements F2, NF1 and NF4, the application must remain responsive with a simultaneous capture and transcription of audio. This would be impossible on a single thread as the audio processing would block the main UI thread. Based on these requirements, the following concurrent architecture was designed.
+
+\begin{itemize}
+    \item A \textbf{UI thread} managed by the WinRT framework, handling all rendering and user interaction.
+    \item An \textbf{audio capture thread} that continuously reads from the microphone and publishes to a shared with the transcription pipeline throughout the conversation.
+    \item A \textbf{transcription thread} that consumes buffered audio every 30 seconds, runs inference via Whisper-Medium then diarisation via ECAPA-TDNN, and dispatches labelled text back into a buffer in UI thread.
+    \item A \textbf{summarisation thread} that loads the Med42-8B summarisation model into the GPU from program launch, then runs Med42-8B inference after the conversation ends, dispatching the result to the UI thread on completion.
+    \item A \textbf{RAG thread} that loads MedCPT from program launch, then when required computes the summary embedding, queries the HNSWLib index, and retrieves matched guidance chunks.
+\end{itemize}
+
+Here is a diagram to demonstrate how the models interact during a normal consultation
 
 \input{chapters/design_implementation/00_architecture}
+
+This threading model also maps naturally onto the heterogeneous compute resources of the Intel AIPC with the transcription and diarisation models running on the CPU, the summarisation model running on the GPU, and the embeddings model running on NPU.
+
+\subsection{Class Overview}
+Figure~\ref{fig:uml_brief} illustrates the high-level object-oriented architecture of the application, demonstrating how the concurrent threads detailed in the previous section map to specific C++ classes. The architecture follows a modular approach, orchestrated by the \texttt{MainWindow} class executing on the UI thread. 
+
+The architecture is divided into the 4 main pipelines required to handle transcription, summary, RAG and UI orchestration. 
+\begin{itemize}
+    \item \textbf{Audio-Transcription Pipeline (Pink, Yellow and Orange):} This pipeline handles all recording, transcription and components. The interactions within the pipeline are as follows:
+    \begin{itemize}
+        \item \textbf{Audio Recording and Processing (Orange)}: The \texttt{AudioRecorder} class handles all audio recording, generating an \texttt{AudioStructure} containing 30 second chunks of audio data and additional metadata required for transcription and diarisation. Every 30 seconds, the UI orchestrator thread signals for this \texttt{AudioStructure} to be published into the \texttt{AudioTranscriptionBridge}.
+        \item \textbf{Audio Transcription Bridge (Yellow)}: A thread safe buffer holding the previous and next 30 seconds of audio, preventing transcription from blocking audio recording.
+        \item \textbf{TranscriptionEngine (Pink)}: Subscribes to the \texttt{AudioTranscriptionBridge} to consume 30 second chunks of audio,  handling transcription then diarisation using the \texttt{DoctorEmbedding}, then appending the diarised transcript to the full transcript within the class.
+    \end{itemize}
+    \item \textbf{SummarisationEngine (Green)}: A class to handle all summarisation, receiving a transcript and generating a summary, and signalling to the \texttt{MainWindow} once complete. This class also sends a signal to the \texttt{MainWindow} indicating once the model has loaded in case the conversation finishes first.
+    \item \textbf{RAG (Pale):} Document chunking, vector indexing, and SQLite database interactions are isolated within the \texttt{GuidelineIndexer} and \texttt{GuidelineRAG} classes, returning the \texttt{GuidelineResult} to the \texttt{MainWindow} to be displayed.
+    \item \textbf{UI and Orchestration (Blue)}: Controls all threads, their lifetimes and signals for the start and end of the recording pipeline, start of summarisation and start of fetching guidelines. The \texttt{MainWindow} class is broken into several sub-classes for each UI component, which acts as a controller for their corresponding models.
+\end{itemize}
+
+Although the UI class controls the threading and flow of this application, the sub-class architecture omitted for brevity ensures this class is not overloaded with different purposes. This architecture was chosen to seperate concerns, and combine the requirements for a concurrent approach with an extensible architecture.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{chapters/uml_brief.drawio.png}
+    \caption{This figure shows an overview of the classes and their interactions within the application colour coded based on the threads they occupy. All class methods and attributes except MainWindow have been removed for visual clarity}
+    \label{fig:uml_brief}
+\end{figure}
 \input{chapters/design_implementation/01_summarisation_engine}
