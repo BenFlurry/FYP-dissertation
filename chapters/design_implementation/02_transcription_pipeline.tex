@@ -1,20 +1,17 @@
 \section{Transcription Pipeline}
 \subsection{Design}
-The design of the transcription pipeline was created based on the parameters of the transcription and diarisation model. The \texttt{Whisper} family of models cannot natively transcribe live text, therefore we have to find a work around. The proposed design involved the following architecture in a 30 second loop:
+\subsubsection{Concurrency}
+The design of the transcription pipeline was created based on the parameters of the transcription and diarisation model. The \texttt{Whisper} family of models cannot natively transcribe live text, therefore we have to find a work around. A 30 second loop was chosen to maximise the capability of \texttt{Whisper} and reduce the chance an audio segment splices a word. The proposed design involved the following architecture:
 \begin{itemize}
-    \item Record the audio in an audio thread
-    \item Once 30 seconds of audio is recorded, publish the audio segment into an audio transcription buffer, a thread-safe queue held in the main window
-    \item The transcription pipeline (hosting the transcription and diarisation models) consumes the audio segment in its own thread
-    \item The audio is passed into the \texttt{Whisper} model
-    \item The \texttt{Whisper} model returns the transcription in a vector of time stamped transcription chunks split by natural pauses in speech
-    \item The audio segment is then split based on the time stamps from the transcription chunks and passed into the \texttt{ECAPA-TDNN} model
-    \item Each chunk is compared against the doctor's voice embedding to determine the speaker
-    \item The speaker label is added to each time stamped chunk and added to the transcript
+    \item Record the audio in an audio thread.
+    \item Once 30 seconds of audio is recorded, publish the audio segment into an audio transcription buffer, a thread-safe queue held in the main window.
+    \item The transcription pipeline (hosting the transcription and diarisation models) consumes the audio segment in its own thread.
+    \item The audio is passed into the \texttt{Whisper} model.
+    \item The \texttt{Whisper} model returns the transcription in a vector of time stamped transcription chunks split by natural pauses in speech.
+    \item The audio segment is then split based on the time stamps from the transcription chunks and passed into the \texttt{ECAPA-TDNN} model.
+    \item Each chunk is compared against the doctor's voice embedding to determine the speaker.
+    \item The speaker label is added to each time stamped chunk and added to the transcript.
 \end{itemize}
-
-The transcription into diarisation pipeline remains sequential since the audio stream must be split based on time stamps generated in the transcription.
-
-To handle the end of the audio stream, a last chunk flag must be added to the audio segment. Once publishing, the transcription engine understands this will be the last segment of audio. When the transcription pipeline completes, the transcript will be sent to the summarisation model to generate the summary.
 
 \begin{figure}[H]
 \centering
@@ -26,7 +23,8 @@ To handle the end of the audio stream, a last chunk flag must be added to the au
     x=1.0cm, y=1.0cm,
     lane label/.style={anchor=east, font=\Large\bfseries, align=right},
     phase label/.style={font=\huge\itshape},
-    event label/.style={font=\Large, align=center}
+    % Added fill=white and inner sep to guarantee lines never strike through text
+    event label/.style={font=\Large, align=center, fill=white, inner sep=3pt, rounded corners=2pt}
 ]
 
 %% Lane y-coordinates (centre of each 5-unit band)
@@ -36,132 +34,226 @@ To handle the end of the audio stream, a last chunk flag must be added to the au
 \def\yBuff{7.5}
 \def\yTrans{2.5}
 
-%% Lane boundary lines (Expanded to accommodate 5 lanes)
+%% Lane boundary lines
 \foreach \y in {0, 5, 10, 15, 20, 25}
-    \draw[cyan!70!blue, very thick] (0, \y) -- (40.0, \y);
+    \draw[cyan!70!blue, very thick] (0, \y) -- (38.0, \y);
 
-%% Lane labels (Reordered top to bottom)
+%% Lane labels
 \node[lane label] at (-0.5, \ySumm)  {Summarisation\\[-0.5ex]thread};
 \node[lane label] at (-0.5, \yUI)    {UI / Main\\[-0.5ex]window};
 \node[lane label] at (-0.5, \yAudio) {Audio\\[-0.5ex]thread};
 \node[lane label] at (-0.5, \yBuff)  {Audio\\[-0.5ex]transcription\\[-0.5ex]buffer};
 \node[lane label] at (-0.5, \yTrans) {Transcription\\[-0.5ex]thread};
 
-%% Phase separator lines
-\foreach \x in {17.5, 27.0}
+%% Phase separator lines (Adjusted for the new compressed layout)
+\foreach \x in {16.5, 22.5}
     \draw[densely dashed, gray!60, thick] (\x, 26.0) -- (\x, -0.5);
 
 %% Phase labels
-\node[phase label] at (8.75,  27.0) {Standard 30s Cycle};
-\node[phase label] at (22.25, 27.0) {Stop Recording Signal};
-\node[phase label] at (33.5,  27.0) {Final Processing};
+\node[phase label] at (8.5,   27.0) {Standard 30s Cycle};
+\node[phase label] at (19.5,  27.0) {Stop Recording Signal};
+\node[phase label] at (30.0,  27.0) {Final Processing};
 
 %%====================================================================
-%% PHASE 1 — Standard 30s Cycle
+%% PHASE 1 - Standard 30s Cycle
 %%====================================================================
 
 % UI starting state
-\node[event] (U_start) at (0.1, \yUI) {};
+\node[event] (U_start) at (1.0, \yUI) {};
 \node[event label, above=6pt] at (U_start) {start recording\\pressed};
 
-% Audio starting state
-\node[event] (A1) at (1.0, \yAudio) {};
+% Audio starting state (0.9 x-offset for steepness)
+\node[event] (A1) at (1.4, \yAudio) {};
 \node[event label, below=6pt] at (A1) {start\\recording};
-\draw[arr] (U_start) -- (A1)
+\draw[arr] (U_start) -- (A1);
 
 % 30 seconds elapsed
-\node[event] (A2) at (4.0, \yAudio) {};
+\node[event] (A2) at (4.5, \yAudio) {};
 \node[event label, above=6pt] at (A2) {30s recorded,\\publish segment};
 \draw[arr] (A1) -- (A2);
 
-% Segment pushed to new Audio transcription buffer
-\node[event] (B1) at (6.0, \yBuff) {};
-\node[event label, above=6pt] at (B1) {add segment\\to buffer};
+% Segment pushed to Audio transcription buffer (0.9 x-offset)
+\node[event] (B1) at (5.4, \yBuff) {};
+\node[event label, left=6pt, align=center] at (B1) {add segment\\to buffer};
 \draw[arr] (A2) -- (B1);
 
-% Transcription thread consumes from buffer
-\node[event] (T1) at (8.0, \yTrans) {};
+% Transcription thread consumes from buffer (0.9 x-offset)
+\node[event] (T1) at (6.3, \yTrans) {};
 \node[event label, below=6pt] at (T1) {consume\\segment};
 \draw[arr] (B1) -- (T1);
 
 % Whisper Transcribes
-\node[event] (T2) at (10.5, \yTrans) {};
+\node[event] (T2) at (9.0, \yTrans) {};
 \node[event label, above=6pt] at (T2) {Whisper\\transcription};
 \draw[arr] (T1) -- (T2);
 
 % ECAPA-TDNN Diarises
-\node[event] (T3) at (13.0, \yTrans) {};
+\node[event] (T3) at (12.0, \yTrans) {};
 \node[event label, below=6pt] at (T3) {ECAPA-TDNN\\(diarisation)};
 \draw[arr] (T2) -- (T3);
 
-% New Step: Add segment to full transcript
-\node[event] (T4) at (16.0, \yTrans) {};
+% Add segment to full transcript
+\node[event] (T4) at (15.0, \yTrans) {};
 \node[event label, above=6pt] at (T4) {add transcript segment\\to full transcript};
 \draw[arr] (T3) -- (T4);
 
 % Audio recording continues concurrently
-\node[event] (A_mid) at (10.5, \yAudio) {};
+\node[event] (A_mid) at (9.0, \yAudio) {};
 \node[event label, below=6pt] at (A_mid) {recording\\continues...};
 \draw[arr] (A2) -- (A_mid);
 
 %%====================================================================
-%% PHASE 2 — Stop Recording Signal
+%% PHASE 2 - Stop Recording Signal
 %%====================================================================
 
 % Stop button pressed in UI
-\node[event] (U_stop) at (19.0, \yUI) {};
+\node[event] (U_stop) at (18.0, \yUI) {};
 \node[event label, above=6pt] at (U_stop) {stop recording\\pressed};
-\draw[arr] (U_start) -- (U_stop); % Connecting UI states
+\draw[arr] (U_start) -- (U_stop); 
 
-% Audio thread receives stop, flags last chunk
-\node[event] (A_stop) at (21.5, \yAudio) {};
-\node[event label, below=6pt] at (A_stop) {receive stop,\\flag "last chunk",\\publish segment};
+% Audio thread receives stop (0.9 x-offset)
+\node[event] (A_stop) at (18.9, \yAudio) {};
+\node[event label, right=6pt, align=center] at (A_stop) {receive stop,\\flag "last chunk",\\publish segment};
 \draw[arr] (U_stop) -- (A_stop);
-\draw[arr] (A_mid) -- (A_stop); % Connecting Audio states
+\draw[arr] (A_mid) -- (A_stop); 
 
-% Final segment pushed to Audio transcription buffer
-\node[event] (B_last) at (24.0, \yBuff) {};
-\node[event label, above=6pt] at (B_last) {add final segment\\to buffer};
+% Final segment pushed to buffer (0.9 x-offset)
+\node[event] (B_last) at (19.8, \yBuff) {};
+\node[event label, right=6pt, align=center] at (B_last) {add final segment\\to buffer};
 \draw[arr] (A_stop) -- (B_last);
-\draw[arr] (B1) -- (B_last); % Connecting Buffer states
+\draw[arr] (B1) -- (B_last); 
 
-% Transcription thread consumes final chunk from buffer
-\node[event] (T_last) at (26.0, \yTrans) {};
+% Transcription thread consumes final chunk (0.9 x-offset)
+\node[event] (T_last) at (20.7, \yTrans) {};
 \node[event label, below=6pt] at (T_last) {consume final\\segment};
 \draw[arr] (B_last) -- (T_last);
-\draw[arr] (T4) -- (T_last); % Connects from the previous pipeline cycle
+\draw[arr] (T4) -- (T_last); 
 
 %%====================================================================
-%% PHASE 3 — Final Processing
+%% PHASE 3 - Final Processing
 %%====================================================================
 
 % Whisper processes final chunk
-\node[event] (T_W_last) at (28.5, \yTrans) {};
+\node[event] (T_W_last) at (23.5, \yTrans) {};
 \node[event label, above=6pt] at (T_W_last) {Whisper\\transcription};
 \draw[arr] (T_last) -- (T_W_last);
 
 % ECAPA processes final chunk
-\node[event] (T_E_last) at (31.0, \yTrans) {};
+\node[event] (T_E_last) at (26.5, \yTrans) {};
 \node[event label, below=6pt] at (T_E_last) {ECAPA-TDNN\\(diarisation)};
 \draw[arr] (T_W_last) -- (T_E_last);
 
-% New Step: Add final segment to full transcript
-\node[event] (T_add_last) at (34.0, \yTrans) {};
+% Add final segment to full transcript
+\node[event] (T_add_last) at (29.5, \yTrans) {};
 \node[event label, above=6pt] at (T_add_last) {add transcript segment\\to full transcript};
 \draw[arr] (T_E_last) -- (T_add_last);
 
 % Transcription complete, sent to summarisation
-\node[event] (T_send) at (37.0, \yTrans) {};
+\node[event] (T_send) at (32.5, \yTrans) {};
 \node[event label, below=6pt] at (T_send) {send final\\transcript};
 \draw[arr] (T_add_last) -- (T_send);
 
-% Summarisation thread receives it
-\node[event] (S_recv) at (39.0, \ySumm) {};
+% Summarisation thread receives it (3.6 x-offset to maintain consistent steepness across 4 lanes)
+\node[event] (S_recv) at (36.1, \ySumm) {};
 \node[event label, above=6pt] at (S_recv) {receive transcript,\\generate summary};
 \draw[arr] (T_send) -- (S_recv);
 
 \end{tikzpicture}%
 }
-\caption{A concurrency diagram illustrating data flow between the Summarisation, UI, Audio, Buffer, and Transcription threads during a standard 30-second recording cycle and upon receiving a termination signal.}
+\caption{A diagram illustrating data flow between the Summarisation, UI, and Transcription threads during a standard 30-second recording cycle and upon receiving a termination signal. The Audio transcription buffer is a thread-safe buffer owned by the UI thread. This diagram represents the flow once the transcription and diarisation models have loaded}
 \label{fig:transcription-pipeline-diagram}
 \end{figure}
+
+\subsubsection{Pipelining}
+A pipeline architecture was used to handle the transcription process due to the isolated audio segment consumed requiring sequential processing by the transcription model then the diarisation model. This is due to the pipeline requiring the timestamps from the transcription model to chunk the corresponding audio data to be diarised. To handle the end of the audio stream, a last chunk flag must be added to the audio segment's metadata. Once published to the audio buffer then consumed by the transcription engine, this flag indicates to the pipeline to transfer the full transcript to the summarisation engine upon completion.
+
+\subsection{Implementation}
+The implementation is split across three classes: \texttt{AudioRecorder}, which captures raw audio via miniaudio; \texttt{AudioTranscriptionBridge}, a thread-safe queue owned by \texttt{MainWindow} that decouples recording from processing; and \texttt{TranscriptionEngine}, which hosts both Whisper and ECAPA-TDNN and runs \texttt{ProcessLoop()}.
+
+\subsubsection{Audio Capture and 30-Second Chunking}
+At startup, miniaudio is configured for mono, 32-bit float capture at 16\,kHz. This is the format that Whisper expects as input, negating a need for resampling. Miniaudio manages its own high-priority OS thread internally, invoking \texttt{DataCallback} each time a 30 second segment has been recorded flushing its own internal buffer into the \texttt{AudioTranscriptionBridge}
+
+\begin{verbatim}
+void AudioRecorder::DataCallback(ma_device* pDevice, void* pOutput,
+                                  const void* pInput, ma_uint32 frameCount) {
+    AudioRecorder* self = (AudioRecorder*)pDevice->pUserData;
+    const float* samples = (const float*)pInput;
+
+    std::lock_guard<std::mutex> lock(self->m_bufferMutex);
+    self->m_currentBuffer.insert(self->m_currentBuffer.end(),
+                                  samples, samples + frameCount);
+    if (self->m_currentBuffer.size() >= 16000 * 30)
+        self->Flush(false);
+}
+void AudioRecorder::Flush(bool isLast) {
+    AudioChunk chunk;
+    size_t samplesNeeded = 16000 * 30;
+    if (m_currentBuffer.size() >= samplesNeeded) {
+        // copy 30s audio segment from miniaudio buffer
+        chunk.audioData.assign(m_currentBuffer.begin(), m_currentBuffer.begin() 
+                                                    + samplesNeeded);
+
+        // remove 30s audio segment from miniaudio buffer
+        m_currentBuffer.erase(m_currentBuffer.begin(), m_currentBuffer.begin() 
+                                                    + samplesNeeded);
+    } else {
+        // end of stream so flush buffer
+        chunk.audioData = m_currentBuffer;
+        m_currentBuffer.clear();
+    }
+    chunk.isLastChunk = isLast;
+    // push to bridge for transcription
+    m_bridge->Push(chunk);
+}
+\end{verbatim}
+
+The mutex protects \texttt{m\_currentBuffer} since \texttt{Stop()} can also call \texttt{Flush()} from the UI thread. Once 30 seconds of samples have accumulated, \texttt{Flush(isLastChunk = false)} copies exactly those samples into an \texttt{AudioChunk}, erases them from the front of the buffer, and pushes the chunk onto the bridge. When the user presses stop, \texttt{Flush(true)} fires with whatever remains, setting \texttt{isLastChunk = true} to signal end-of-stream.
+
+\subsubsection{The Audio Transcription Bridge}
+\texttt{AudioTranscriptionBridge} is a \texttt{std::queue<AudioChunk>} protected by a \texttt{std::mutex} and a \texttt{std::condition\_variable}. It is owned by value inside \texttt{MainWindow} and passed by pointer to both \texttt{AudioRecorder} and \texttt{TranscriptionEngine} at construction. \texttt{Pop()} blocks the transcription thread with no busy-waiting until a chunk is available, then removes and returns it atomically:
+
+\begin{verbatim}
+AudioChunk AudioTranscriptionBridge::Pop() {
+    std::unique_lock<std::mutex> lock(m_mutex);
+    m_cv.wait(lock, [this] { return !m_queue.empty(); });
+    AudioChunk chunk = m_queue.front();
+    m_queue.pop();
+    return chunk;
+}
+\end{verbatim}
+
+Because \texttt{pop()} is called unconditionally before returning, consumption and removal are a single atomic operation with respect to the mutex. 
+
+\subsubsection{Transcription and Diarisation in ProcessLoop}
+\texttt{ProcessLoop()} runs on the detached transcription \texttt{m\_processingThread}. It loops, blocking on \texttt{Pop()} until a chunk arrives. Before passing audio to Whisper, amplitude normalisation is applied - if the peak amplitude is below 0.9 but above a noise floor of 0.001, a gain is applied to bring it to 0.9. This improves Whisper accuracy on quiet segments without clipping loud segments.
+
+Whisper is then invoked with timestamps enabled:
+
+\begin{verbatim}
+ov::genai::WhisperGenerationConfig config;
+config.max_new_tokens = 100;
+config.return_timestamps = true;
+config.num_beams = 3;
+auto result = m_pipeline->generate(audioChunk.audioData, config);
+\end{verbatim}
+
+Whisper returns a vector of segments, each carrying \texttt{start\_ts} and \texttt{end\_ts} in seconds. These timestamps are used to slice the corresponding audio back out of the original 30-second buffer and feed each clip to ECAPA-TDNN:
+
+\begin{verbatim}
+size_t startIdx = (size_t)(transcribedChunk.start_ts * 16000);
+size_t endIdx   = (size_t)(transcribedChunk.end_ts   * 16000);
+std::vector<float> clip(sourceAudio.begin() + startIdx, sourceAudio.begin() + endIdx);
+\end{verbatim}
+
+Clips shorter than 8000 samples (~0.5\,s) are skipped as too brief for a reliable speaker embedding. For longer clips, ECAPA-TDNN produces a fixed-length embedding which is compared to the enrolled doctor profile via cosine similarity. A threshold of 0.7 was determined empirically as appropriate for ECAPA-TDNN:
+
+\begin{verbatim}
+float score = SpeakerEncoder::CosineSimilarity(m_doctorProfile, currentEmbedding);
+std::string speakerLabel = (score > 0.7f) ? "Doctor" : "Patient";
+\end{verbatim}
+
+Each labelled segment is appended to a \texttt{std::stringstream} transcript as \texttt{[Doctor]} or \texttt{[Patient]} followed by the Whisper text.
+
+\subsubsection{End-of-Stream Handling}
+
+After processing all segments in a chunk, the \texttt{isLastChunk} flag is checked. If set, \texttt{m\_isRunning} is set to \texttt{false}, causing the \texttt{while} loop to exit after the current chunk completes. \texttt{ProcessLoop()} then returns \texttt{m\_fullTranscript.str()} to the caller the transcription processing thread which passes it directly to the summarisation engine.
