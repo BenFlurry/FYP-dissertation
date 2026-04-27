@@ -46,11 +46,11 @@
 % This is a core chapter in your report and will usually be quite substantial, 10
 % pages or more.
 
-For the ease of the reader, the design and implementation will provide an overview of the system architecture to better position the rest of this chapter's chronological path of the application development. As per a typical software engineering project, after the requirements mapping and feasibility study was conducted, each component of the application was designed, then implemented in an iterative format. This chapter will follow this pattern to show the journey the project took from a simple summarisation engine prototype to a full Microsoft Store application.
+For the ease of the reader, the design and implementation chapter will provide an overview of the system architecture before moving to a chronological path of prototypes created during development. As per a typical software engineering project, after the requirements mapping and feasibility study was conducted, each component of the application was designed, then implemented in an iterative format. This chapter will follow this pattern to show the journey the project took from a simple summarisation engine prototype to a complete Microsoft Store application.
 
 \section{Application Design Overview}
 \subsection{Concurrency}
-To begin, the largest factor of the design of the application is the concurrency pipeline. This design ensures that lengthy model loading and inference times remain separate from each other and the main UI thread to ensure the application remains responsive and model inference remains timely. Based on the project requirements F2, NF1 and NF4, the application must remain responsive with a simultaneous capture and transcription of audio. This would be impossible on a single thread as the audio processing would block the main UI thread. Based on these requirements, the following concurrent architecture was designed.
+To begin, the largest factor in the design of the application is the concurrency pipelining. This design separates lengthy model loading and inference times from each other and the UI thread to ensure the application remains responsive and model inference remains timely, addressing project requirements F2, NF1 and NF4. This would be impossible on a single thread as the audio processing alone would block the main UI thread. Based on the requirements, the following concurrent architecture was designed.
 
 \begin{itemize}
     \item A \textbf{UI thread} managed by the WinRT framework, handling all rendering and user interaction.
@@ -60,7 +60,7 @@ To begin, the largest factor of the design of the application is the concurrency
     \item A \textbf{RAG thread} that loads MedCPT from program launch, then when required computes the summary embedding, queries the HNSWLib index, and retrieves matched guidance chunks.
 \end{itemize}
 
-Here is a diagram to demonstrate how the models interact during a normal consultation
+Here is a diagram to demonstrate how the different pipelines interact during a conversation. Note that the audio thread, audio transcription bridge and transcription pipeline have been merged into one swimlane for brevity and will be expanded upon later (TODO link)
 
 \input{chapters/design_implementation/00_architecture}
 
@@ -82,7 +82,7 @@ The architecture is divided into the 4 main pipelines required to handle transcr
     \item \textbf{UI and Orchestration (Blue)}: Controls all threads, their lifetimes and signals for the start and end of the recording pipeline, start of summarisation and start of fetching guidelines. The \texttt{MainWindow} class is broken into several sub-classes for each UI component, which acts as a controller for their corresponding models.
 \end{itemize}
 
-Although the UI class controls the threading and flow of this application, the sub-class architecture omitted for brevity ensures this class is not overloaded with different purposes. This architecture was chosen to seperate concerns, and combine the requirements for a concurrent approach with an extensible architecture.
+Although the UI class controls the threading and flow of this application, the sub-class architecture omitted for brevity ensures this class is not overloaded with different purposes. This is handled through the naming convention: \texttt{MainWindow.<ComponentName>.xaml.cpp} combined with the \texttt{namespace winrt::ClinicalSummarisation::implementation} declaration, which results in 1 \texttt{MainWindow} class with multiple implementation files for ease of development. The orchestrator architecture and design decision will be expanded upon in the future. (TODO link)
 
 \begin{figure}[H]
     \centering
@@ -90,4 +90,9 @@ Although the UI class controls the threading and flow of this application, the s
     \caption{This figure shows an overview of the classes and their interactions within the application colour coded based on the threads they occupy. All class methods and attributes except MainWindow have been removed for visual clarity}
     \label{fig:uml_brief}
 \end{figure}
+
+
+
 \input{chapters/design_implementation/01_summarisation_engine}
+
+\input{chapters/design_implementation/02_transcription_pipeline}

@@ -1,0 +1,167 @@
+\section{Transcription Pipeline}
+\subsection{Design}
+The design of the transcription pipeline was created based on the parameters of the transcription and diarisation model. The \texttt{Whisper} family of models cannot natively transcribe live text, therefore we have to find a work around. The proposed design involved the following architecture in a 30 second loop:
+\begin{itemize}
+    \item Record the audio in an audio thread
+    \item Once 30 seconds of audio is recorded, publish the audio segment into an audio transcription buffer, a thread-safe queue held in the main window
+    \item The transcription pipeline (hosting the transcription and diarisation models) consumes the audio segment in its own thread
+    \item The audio is passed into the \texttt{Whisper} model
+    \item The \texttt{Whisper} model returns the transcription in a vector of time stamped transcription chunks split by natural pauses in speech
+    \item The audio segment is then split based on the time stamps from the transcription chunks and passed into the \texttt{ECAPA-TDNN} model
+    \item Each chunk is compared against the doctor's voice embedding to determine the speaker
+    \item The speaker label is added to each time stamped chunk and added to the transcript
+\end{itemize}
+
+The transcription into diarisation pipeline remains sequential since the audio stream must be split based on time stamps generated in the transcription.
+
+To handle the end of the audio stream, a last chunk flag must be added to the audio segment. Once publishing, the transcription engine understands this will be the last segment of audio. When the transcription pipeline completes, the transcript will be sent to the summarisation model to generate the summary.
+
+\begin{figure}[H]
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[
+    >=Stealth,
+    event/.style={circle, fill=black, inner sep=0pt, minimum size=8pt},
+    arr/.style={->, thick},
+    x=1.0cm, y=1.0cm,
+    lane label/.style={anchor=east, font=\Large\bfseries, align=right},
+    phase label/.style={font=\huge\itshape},
+    event label/.style={font=\Large, align=center}
+]
+
+%% Lane y-coordinates (centre of each 5-unit band)
+\def\ySumm{22.5}
+\def\yUI{17.5}
+\def\yAudio{12.5}
+\def\yBuff{7.5}
+\def\yTrans{2.5}
+
+%% Lane boundary lines (Expanded to accommodate 5 lanes)
+\foreach \y in {0, 5, 10, 15, 20, 25}
+    \draw[cyan!70!blue, very thick] (0, \y) -- (40.0, \y);
+
+%% Lane labels (Reordered top to bottom)
+\node[lane label] at (-0.5, \ySumm)  {Summarisation\\[-0.5ex]thread};
+\node[lane label] at (-0.5, \yUI)    {UI / Main\\[-0.5ex]window};
+\node[lane label] at (-0.5, \yAudio) {Audio\\[-0.5ex]thread};
+\node[lane label] at (-0.5, \yBuff)  {Audio\\[-0.5ex]transcription\\[-0.5ex]buffer};
+\node[lane label] at (-0.5, \yTrans) {Transcription\\[-0.5ex]thread};
+
+%% Phase separator lines
+\foreach \x in {17.5, 27.0}
+    \draw[densely dashed, gray!60, thick] (\x, 26.0) -- (\x, -0.5);
+
+%% Phase labels
+\node[phase label] at (8.75,  27.0) {Standard 30s Cycle};
+\node[phase label] at (22.25, 27.0) {Stop Recording Signal};
+\node[phase label] at (33.5,  27.0) {Final Processing};
+
+%%====================================================================
+%% PHASE 1 — Standard 30s Cycle
+%%====================================================================
+
+% UI starting state
+\node[event] (U_start) at (0.1, \yUI) {};
+\node[event label, above=6pt] at (U_start) {start recording\\pressed};
+
+% Audio starting state
+\node[event] (A1) at (1.0, \yAudio) {};
+\node[event label, below=6pt] at (A1) {start\\recording};
+\draw[arr] (U_start) -- (A1)
+
+% 30 seconds elapsed
+\node[event] (A2) at (4.0, \yAudio) {};
+\node[event label, above=6pt] at (A2) {30s recorded,\\publish segment};
+\draw[arr] (A1) -- (A2);
+
+% Segment pushed to new Audio transcription buffer
+\node[event] (B1) at (6.0, \yBuff) {};
+\node[event label, above=6pt] at (B1) {add segment\\to buffer};
+\draw[arr] (A2) -- (B1);
+
+% Transcription thread consumes from buffer
+\node[event] (T1) at (8.0, \yTrans) {};
+\node[event label, below=6pt] at (T1) {consume\\segment};
+\draw[arr] (B1) -- (T1);
+
+% Whisper Transcribes
+\node[event] (T2) at (10.5, \yTrans) {};
+\node[event label, above=6pt] at (T2) {Whisper\\transcription};
+\draw[arr] (T1) -- (T2);
+
+% ECAPA-TDNN Diarises
+\node[event] (T3) at (13.0, \yTrans) {};
+\node[event label, below=6pt] at (T3) {ECAPA-TDNN\\(diarisation)};
+\draw[arr] (T2) -- (T3);
+
+% New Step: Add segment to full transcript
+\node[event] (T4) at (16.0, \yTrans) {};
+\node[event label, above=6pt] at (T4) {add transcript segment\\to full transcript};
+\draw[arr] (T3) -- (T4);
+
+% Audio recording continues concurrently
+\node[event] (A_mid) at (10.5, \yAudio) {};
+\node[event label, below=6pt] at (A_mid) {recording\\continues...};
+\draw[arr] (A2) -- (A_mid);
+
+%%====================================================================
+%% PHASE 2 — Stop Recording Signal
+%%====================================================================
+
+% Stop button pressed in UI
+\node[event] (U_stop) at (19.0, \yUI) {};
+\node[event label, above=6pt] at (U_stop) {stop recording\\pressed};
+\draw[arr] (U_start) -- (U_stop); % Connecting UI states
+
+% Audio thread receives stop, flags last chunk
+\node[event] (A_stop) at (21.5, \yAudio) {};
+\node[event label, below=6pt] at (A_stop) {receive stop,\\flag "last chunk",\\publish segment};
+\draw[arr] (U_stop) -- (A_stop);
+\draw[arr] (A_mid) -- (A_stop); % Connecting Audio states
+
+% Final segment pushed to Audio transcription buffer
+\node[event] (B_last) at (24.0, \yBuff) {};
+\node[event label, above=6pt] at (B_last) {add final segment\\to buffer};
+\draw[arr] (A_stop) -- (B_last);
+\draw[arr] (B1) -- (B_last); % Connecting Buffer states
+
+% Transcription thread consumes final chunk from buffer
+\node[event] (T_last) at (26.0, \yTrans) {};
+\node[event label, below=6pt] at (T_last) {consume final\\segment};
+\draw[arr] (B_last) -- (T_last);
+\draw[arr] (T4) -- (T_last); % Connects from the previous pipeline cycle
+
+%%====================================================================
+%% PHASE 3 — Final Processing
+%%====================================================================
+
+% Whisper processes final chunk
+\node[event] (T_W_last) at (28.5, \yTrans) {};
+\node[event label, above=6pt] at (T_W_last) {Whisper\\transcription};
+\draw[arr] (T_last) -- (T_W_last);
+
+% ECAPA processes final chunk
+\node[event] (T_E_last) at (31.0, \yTrans) {};
+\node[event label, below=6pt] at (T_E_last) {ECAPA-TDNN\\(diarisation)};
+\draw[arr] (T_W_last) -- (T_E_last);
+
+% New Step: Add final segment to full transcript
+\node[event] (T_add_last) at (34.0, \yTrans) {};
+\node[event label, above=6pt] at (T_add_last) {add transcript segment\\to full transcript};
+\draw[arr] (T_E_last) -- (T_add_last);
+
+% Transcription complete, sent to summarisation
+\node[event] (T_send) at (37.0, \yTrans) {};
+\node[event label, below=6pt] at (T_send) {send final\\transcript};
+\draw[arr] (T_add_last) -- (T_send);
+
+% Summarisation thread receives it
+\node[event] (S_recv) at (39.0, \ySumm) {};
+\node[event label, above=6pt] at (S_recv) {receive transcript,\\generate summary};
+\draw[arr] (T_send) -- (S_recv);
+
+\end{tikzpicture}%
+}
+\caption{A concurrency diagram illustrating data flow between the Summarisation, UI, Audio, Buffer, and Transcription threads during a standard 30-second recording cycle and upon receiving a termination signal.}
+\label{fig:transcription-pipeline-diagram}
+\end{figure}

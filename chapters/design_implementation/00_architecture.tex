@@ -27,7 +27,7 @@
 \node[lane label] at (-0.5, \yRAG)   {RAG\\[-0.5ex]thread};
 \node[lane label] at (-0.5, \ySumm)  {Summarisation\\[-0.5ex]thread};
 \node[lane label] at (-0.5, \yUI)    {UI\\[-0.5ex]thread};
-\node[lane label] at (-0.5, \yTrans) {Transcription\\[-0.5ex]thread};
+\node[lane label] at (-0.5, \yTrans) {Audio \&\\Transcription\\[-0.5ex]thread};
 
 %% Phase separator lines (EXTENDED TO 21.0 TO MATCH NEW HEIGHT)
 \foreach \x in {9.0, 16.0, 29.0}
@@ -85,7 +85,7 @@
 
 \node[event] (Tr_sig) at (14.0, \yTrans) {};
 \draw[arr] (U_srec) -- (Tr_sig);
-\node[event label, below=6pt] at (Tr_sig) {start transcription};
+\node[event label, below=6pt] at (Tr_sig) {start audio\\recording, transcription\\\& diarisation};
 \draw[arr] (Tr_ready) -- (Tr_sig);
 
 %%====================================================================
@@ -142,7 +142,7 @@
 
 \end{tikzpicture}%
 }
-\caption{Concurrency diagram illustrating thread interactions across the four phases of the application lifecycle.}
+\caption{A diagram illustrating thread interactions across the four phases of the application lifecycle presenting an overview of the interactions between the 4 main components of the application.}
 \label{fig:concurrency-diagram}
 \end{figure}
 

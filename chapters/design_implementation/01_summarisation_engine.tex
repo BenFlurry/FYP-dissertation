@@ -1,4 +1,95 @@
 \section{Summarisation Engine}
 
-\label{sec:med42test}
-This project began with the development of the summarisation engine. This choice was 2-fold. Firstly, the model used and prompting strategy had to be evaluated to find the highest performing model on the test conversation-summary dataset. Secondly, as the core of the application this enabled the creation of a prototype allowing for demonstrations and videos to be created gathering feedback and generating traction from the beginning of development.
+\label{sec:med42testj}
+This project began with the development of the summarisation engine. This choice was 2-fold. Firstly, the model used and prompting strategy had to be evaluated to find the highest performing model on the a test conversation-summary dataset (requirement T7). Secondly, as the core of the application this enabled the creation of an early prototype allowing for demonstrations and videos to be created gathering feedback and generating traction from the beginning of development.
+
+\subsection{Testing Models}
+To find the model that has the best trade-off between speed and accuracy, I utilised the validation set from the previous project and created a testing harness to evaluate each model. The \texttt{MTS-Dialog} dataset contains 1,700 mock patient-doctor transcripts each with a corresponding medical summary of the conversation, with 170 samples for validation, a strong candidate for evaluating the effectiveness of each model. Created by 3 Microsoft employees, their dataset was created to evaluate Facebook's BART-large \cite{bart} and Google's Pegasus \cite{pegasus} models fine-tuned with guided summarisation and data augmentation \cite{mts-dialog}. 
+
+\subsubsection{Methodology}
+I used the Mistral-7b, BioMistral-7b and Med42-8B models for testing. Each model followed the same strategy
+\begin{enumerate}
+    \item The model was quantised to int4 and was configured with \texttt{temperature=0.3}
+    \item For each validation sample, the ground truth summary, generated summary, and time taken was recorded, then saved to a CSV
+    \item BERT score was used to determine the F1, Precision, Recall using a re-scaled baseline for better comparison between models
+    \item The average time was calculated
+\end{enumerate}
+
+This enabled a comparison between 2 key results: the inference time and accuracy. The results are as follows
+
+\subsection{Design}
+\subsubsection{Concurrency}
+Due to the Med42 model requiring 20 seconds to load, this presents a concurrency constraint. Simply loading this model on the UI thread would cause unacceptable UI latency, therefore the following concurrency design was followed:
+
+\begin{itemize}
+    \item At program launch, start a new thread from the UI thread loading the model on the GPU
+    \item Declare that the model has not yet been loaded via an atomic boolean flag shared between threads
+    \item Once loaded, flip the boolean to signal readiness
+    \item Once transcription completes, the processing thread checks the atomic boolean
+    \item If the model has already loaded (the common case where transcription takes longer than 20 seconds), the processing thread proceeds immediately to summary generation
+    \item If the model has not yet loaded, the processing thread blocks on the shared future, waiting for it to complete before continuing
+    \item Once the summary is generated, the result is marshalled back to the UI thread for display
+\end{itemize}
+
+This design handles the race condition where the model has not finished loading, but a request is sent while ensuring the status of the loading model remains accessible to the UI thread for updates to the user.
+
+\subsubsection{Prompting}
+The effectiveness of an LLM response is highly linked to the prompt length and detail. Although pre-trained on medical textbooks and guidance, the prompt must still guide the LLM to remove any unecessary conversation and summarise only the medical facts stated. An initial prompt was generated which was modified later based on client feedback during a demonstration.
+
+\subsection{Implementation}
+
+The implementation is split across two classes: \texttt{SummarisationEngine}, which wraps the OpenVINO LLM pipeline with \texttt{loadModel()} and \texttt{generateFromTranscription()}, and \texttt{MainWindow}, which owns all concurrency state and coordinates the threads.
+
+
+\subsubsection{Model Loading at Launch}
+At application startup, \texttt{InitialiseTranscription()} is called on the UI thread. Rather than block the UI for 20 seconds, \texttt{std::async} is used to launch \texttt{loadModel()} immediately on a new OS thread:
+
+\begin{lstlisting}[language=C++]
+m_summariserLoadFuture = std::async(std::launch::async, [this]() {
+    try {
+        m_summariser->loadModel();
+        m_isSummariserReady = true;
+    }
+    catch (...) {
+        MainWindow::SetAppState(AppState::IncompatibleDevice);
+    }
+});
+\end{lstlisting}
+
+\texttt{std::launch::async} guarantees a real OS thread is spawned immediately. The returned \texttt{std::future<void>} is stored in the \texttt{MainWindow} member \texttt{m\_summariserLoadFuture} rather than discarded as the destructor of a \texttt{std::future} produced by \texttt{std::async} blocks until the task completes. Allowing it to go out of scope early would silently stall the thread that destructed it.
+
+Once loaded, the \texttt{std::atomic<bool> m\_isSummariserReady} flag is set to \texttt{true}. Should \texttt{loadModel()} throw when loading, the exception is caught and the application is moved to an \texttt{IncompatibleDevice} error state. Although the \texttt{catch} handles all error types, the only possible error when loading is a device with too little RAM or a non-Intel GPU
+
+\subsubsection{Waiting for the Model at Summary Time}
+Once a final transcript is available, the processing thread must ensure the model is ready before calling \texttt{generateTranscription()}. It does this in two steps:
+
+\begin{lstlisting}[language=C++]
+if (!m_isSummariserReady) {
+    if (m_summariserLoadFuture.valid())
+        m_summariserLoadFuture.wait();
+}
+\end{lstlisting}
+
+First, the atomic flag \texttt{m\_isSummariserReady} is checked. Because \texttt{std::atomic} reads are lock-free, this check is extremely cheap and covers the common case where a typical consultation lasts several minutes, well beyond the 20-second load time, so the model will almost always already be ready. If it is, execution proceeds immediately with no synchronisation overhead.
+
+If the flag is still \texttt{false}, the thread falls through to \texttt{m\_summariserLoadFuture.wait()}. The \texttt{.valid()} guard is necessary because a default-constructed \texttt{std::future} has no associated state; calling \texttt{.wait()} on it would be undefined behaviour. \texttt{.wait()} then puts the processing thread to sleep, with no busy-waiting, until the OS wakes it once \texttt{loadModel()} returns. Critically, the UI thread is never involved in any of this waiting.
+
+\subsubsection{Generating and Returning the Summary}
+With the model guaranteed to be loaded, \texttt{generateFromTranscription()} is called synchronously on the processing thread. Since LLM inference can itself take several seconds, keeping this off the UI thread is equally important. Once the summary string is returned, \texttt{DispatcherQueue().TryEnqueue()} marshals the result back to the UI thread for a UI update.
+
+\begin{lstlisting}[language=C++]
+// within the Transcription/ Summarisation processing thread
+std::string soapNote = m_summariser->generateFromTranscription(finalTranscript);
+
+// dispatch back to the UI thread
+this->DispatcherQueue().TryEnqueue([this, soapNote, finalTranscript]() {
+    m_summarisation = soapNote;
+    m_transcription = finalTranscript;
+});
+\end{lstlisting}
+
+Once a working summarisation engine had been created, I moved onto the transcription and diarisation.
+
+
+
+
