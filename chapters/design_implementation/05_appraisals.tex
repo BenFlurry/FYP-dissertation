@@ -1,0 +1,69 @@
+\section{Appraisal Entry System}
+
+\subsection{Design}
+The Appraisal Entry System facilitates the documentation, categorisation, and retrieval of generated clinical summaries. Following a consultation, the doctor must be able to review the generated summary, append clinical notes, assign metadata (such as categorical tags), and save the record for future reference. 
+
+To satisfy both external compliance and internal application requirements, a dual-storage paradigm was designed:
+\begin{itemize}
+    \item \textbf{External Export}: A human-readable text file is generated and saved to a user-defined directory via the Windows File Explorer, maintaining the NHS standard \texttt{YYYY-MM-DD\_Appraisal\_} naming convention.
+    \item \textbf{Internal State}: A structured JSON file is maintained within the application's isolated local storage environment. This acts as a lightweight database, enabling the application to load, filter, and modify historical appraisals across sessions without requiring a heavy embedded SQL database.
+\end{itemize}
+
+Furthermore, the system requires a robust search and filtering mechanism to allow practitioners to retrieve historical records by name or specific clinical tags, alongside the ability to modify or delete existing entries.
+
+\subsection{Implementation}
+The appraisal system is integrated into the \texttt{MainWindow} class structure and handled within the \texttt{MainWindow.Appraisal.cpp} and \texttt{MainWindow.DisplayAppraisals.cpp} translation units. It uses the \texttt{winrt::Windows::Data::Json} and \texttt{winrt::Windows::Storage} namespaces for data persistence, and dynamically constructs WinUI3 elements at runtime due to the static nature of a WinUI3 XAML front-end
+
+\subsubsection{Data Serialisation and Storage}
+When a user saves an appraisal, \texttt{SaveAppraisalToJsonAsync} manages the serialisation. The application retrieves \texttt{appraisals.json} from the MSIX \texttt{LocalFolder}. If the file is corrupted or missing, a new \texttt{JsonObject} is instantiated. 
+
+A notable implementation detail is the processing of user-defined tags. The input string is parsed via a \texttt{std::wstringstream}, delimited by commas, and subjected to whitespace trimming before being appended to a \texttt{JsonArray}. If no tags are provided, the system defaults to an \texttt{untagged} label.
+
+\begin{verbatim}
+// string trimming and tokenisation for tags
+while (std::getline(ts, token, L',')) {
+    size_t first = token.find_first_not_of(L" ");
+    size_t last = token.find_last_not_of(L" ");
+    if (first != std::string::npos && last != std::string::npos) {
+        token = token.substr(first, (last - first + 1));
+        tagsArray.Append(JsonValue::CreateStringValue(token));
+    }
+}
+// default to untagged if empty
+if (tagsArray.Size() == 0) tagsArray.Append(JsonValue::CreateStringValue(L"untagged"));
+
+appraisalData.SetNamedValue(L"tags", tagsArray);
+rootObject.SetNamedValue(keyName, appraisalData);
+co_await FileIO::WriteTextAsync(file, rootObject.Stringify());
+\end{verbatim}
+
+\subsubsection{In Memory Caching and Filtering}
+Appraisals are loaded into a \texttt{std::vector<AppraisalItem> m\_allAppraisals} vector upon navigating to the history view via \texttt{LoadAppraisalsAsync()}.  Filtering is applied in-memory. The \texttt{RenderAppraisalsList()} method iterates over the cached vector, applying a substring match for the appraisal name and checking against a \texttt{std::set<std::wstring> m\_activeFilters} for tag matches. The resulting subset is sorted chronologically using \texttt{std::sort} prior to rendering.
+
+\subsubsection{Dynamic User Interface Generation}
+For each filtered \texttt{AppraisalItem}, the application iteratively constructs a \texttt{Button} containing a \texttt{Border} and a \texttt{StackPanel}. This approach allows for control over the glass style theme. Additionally, embedding the appraisal's unique identifier into the \texttt{Tag} property of the button allows click events to be handled by the generated button.
+
+\subsubsection{State Synchronisation during Modification}
+When an appraisal is edited or deleted, the system must synchronise the in-memory cache, the JSON storage, and the UI. For instance, within \texttt{HistoryDialog\_DeleteClick()}, the target entry is first removed from the \texttt{m\_allAppraisals}. Next, the JSON file is read, the target key is removed and the file is overwritten. Finally, \texttt{RenderAppraisalsList()} is invoked to rebuild the user interface from the updated cache, ensuring the deleted item is immediately removed from the view.
+
+\begin{verbatim}
+// remove from internal list
+auto it = std::remove_if(m_allAppraisals.begin(), m_allAppraisals.end(),
+    [&](const AppraisalItem& app) { return app.Name == targetName; });
+
+if (it != m_allAppraisals.end()) {
+    m_allAppraisals.erase(it, m_allAppraisals.end());
+}
+
+// remove from file on disk
+IStorageItem item = co_await localFolder.TryGetItemAsync(L"appraisals.json");
+StorageFile file = item.as<StorageFile>();
+winrt::hstring jsonString = co_await FileIO::ReadTextAsync(file);
+JsonObject rootObject;
+if (JsonObject::TryParse(jsonString, rootObject)) {
+    if (rootObject.HasKey(targetName)) {
+        rootObject.Remove(targetName);
+        co_await FileIO::WriteTextAsync(file, rootObject.Stringify());
+    }
+}
+\end{verbatim}

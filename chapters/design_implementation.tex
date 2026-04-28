@@ -82,17 +82,34 @@ The architecture is divided into the 4 main pipelines required to handle transcr
     \item \textbf{UI and Orchestration (Blue)}: Controls all threads, their lifetimes and signals for the start and end of the recording pipeline, start of summarisation and start of fetching guidelines. The \texttt{MainWindow} class is broken into several sub-classes for each UI component, which acts as a controller for their corresponding models.
 \end{itemize}
 
+\subsection{Orchestration}
 Although the UI class controls the threading and flow of this application, the sub-class architecture omitted for brevity ensures this class is not overloaded with different purposes. This is handled through the naming convention: \texttt{MainWindow.<ComponentName>.xaml.cpp} combined with the \texttt{namespace winrt::ClinicalSummarisation::implementation} declaration, which results in 1 \texttt{MainWindow} class with multiple implementation files for ease of development. The orchestrator architecture and design decision will be expanded upon in the future. (TODO link)
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=1\linewidth]{chapters/uml_brief.drawio.png}
+    \includegraphics[width=1\linewidth]{chapters/finalcolour.drawio.png}
     \caption{This figure shows an overview of the classes and their interactions within the application colour coded based on the threads they occupy. All class methods and attributes except MainWindow have been removed for visual clarity}
     \label{fig:uml_brief}
 \end{figure}
 
+\section{Environment}
+The selection of Visual Studio as the primary development environment was motivated by two factors. Firstly, the integrated MSIX packaging project template facilitated streamlined deployment, including sideloading and publishing. Secondly, the IDE provided a graphical interface for configuring compiler and linker paths for multiple third-party libraries within the MSIX sandbox.
+
+\subsection{Packaging, Publishing and Deployment}
+The solution architecture utilises the MSIX packaged project template, dividing the workspace into a primary source code project, \texttt{ClinicalSummarisation}, and a dedicated packaging project, \texttt{ClinicalSummarisation (Package)}. This structural separation isolates the compilation of the application logic from the generation of the final deployment payload. 
+
+This approach provides flexibility regarding deployment type. By "deploying" the application, it cleans, builds and loads the application onto the device to be ran through the Windows start menu. By "Publishing" the app with the self sign dialog, a \texttt{MSIXBUNDLE} file is created with a self-signed certificate to be side-loaded onto other devices. By "Publishing" the app with the Microsoft Store dialog, publisher crendentials are added to create a \texttt{MSIXBUNDLE} that can be uploaded to the Microsoft Store upload page to be published on the app store. I created a document covering all the criteria required in the Microsoft Store publishing process (TODO link)
+
+
+\subsection{Library Linking}
+The ML model files were housed directly within the packaging project directory and assigned a copy execution directive within the file properties. This configuration instructs the build system to embed the large model assets directly into the generated application package. Upon deployment, the models are automatically unpacked into the application's local installation directory. This design decision guarantees the models are immediately accessible to the application at runtime
+
+Managing third-party dependencies in C++ requires configuration of header includes and library, binaries and DLL linkages. To maintain a structured codebase \texttt{External} directory at the root of the solution. The Visual Studio GUI was used to define the include directories and linker inputs for these external packages. This approach ensures that the compiler correctly resolves external API calls during the build phase and that the necessary DLLs are mapped correctly. By explicitly defining these paths within the project properties, the build system ensures that all libraries are bundled into the MSIX sandbox. This prevents runtime module execution failures when the application is deployed to an external environment, as the sandbox guarantees the environment contains identical dependencies to the development environment.
 
 
 \input{chapters/design_implementation/01_summarisation_engine}
-
 \input{chapters/design_implementation/02_transcription_pipeline}
+\input{chapters/design_implementation/03_UI}
+\input{chapters/design_implementation/04_UI_orchestration}
+\input{chapters/design_implementation/05_appraisals}
+\input{chapters/design_implementation/06_RAG}

@@ -17,6 +17,15 @@ I used the Mistral-7b, BioMistral-7b and Med42-8B models for testing. Each model
 
 This enabled a comparison between 2 key results: the inference time and accuracy. The results are as follows
 
+\begin{figure}
+    \centering
+    \includegraphics[width=0.5\linewidth]{model_comparison_results.png}
+    \caption{A comparison between 3 models with varying quantisation levels, finding the optimal speed-accuracy tradeoff}
+    \label{fig:model_comparison_results.png}
+\end{figure}
+
+Further testing was conducted between different processing units. It was found that with the Med42 model, loading took an average of 2 minutes on the NPU compared to 20 seconds on the GPU, with the average inference time for a short conversation increasing from 2.5 seconds on the GPU to 25 seconds on the NPU. Therefore, the NPU is not fit for hosting an 8B LLM.
+
 \subsection{Design}
 \subsubsection{Concurrency}
 Due to the Med42 model requiring 20 seconds to load, this presents a concurrency constraint. Simply loading this model on the UI thread would cause unacceptable UI latency, therefore the following concurrency design was followed:
@@ -34,12 +43,10 @@ Due to the Med42 model requiring 20 seconds to load, this presents a concurrency
 This design handles the race condition where the model has not finished loading, but a request is sent while ensuring the status of the loading model remains accessible to the UI thread for updates to the user.
 
 \subsubsection{Prompting}
-The effectiveness of an LLM response is highly linked to the prompt length and detail. Although pre-trained on medical textbooks and guidance, the prompt must still guide the LLM to remove any unecessary conversation and summarise only the medical facts stated. An initial prompt was generated which was modified later based on client feedback during a demonstration.
+The effectiveness of an LLM response is highly linked to the prompt length and detail. Although pre-trained on medical textbooks and guidance, the prompt must still guide the LLM to remove any unecessary conversation and summarise only the medical facts stated. 
 
 \subsection{Implementation}
-
 The implementation is split across two classes: \texttt{SummarisationEngine}, which wraps the OpenVINO LLM pipeline with \texttt{loadModel()} and \texttt{generateFromTranscription()}, and \texttt{MainWindow}, which owns all concurrency state and coordinates the threads.
-
 
 \subsubsection{Model Loading at Launch}
 At application startup, \texttt{InitialiseTranscription()} is called on the UI thread. Rather than block the UI for 20 seconds, \texttt{std::async} is used to launch \texttt{loadModel()} immediately on a new OS thread:
@@ -59,6 +66,8 @@ m_summariserLoadFuture = std::async(std::launch::async, [this]() {
 \texttt{std::launch::async} guarantees a real OS thread is spawned immediately. The returned \texttt{std::future<void>} is stored in the \texttt{MainWindow} member \texttt{m\_summariserLoadFuture} rather than discarded as the destructor of a \texttt{std::future} produced by \texttt{std::async} blocks until the task completes. Allowing it to go out of scope early would silently stall the thread that destructed it.
 
 Once loaded, the \texttt{std::atomic<bool> m\_isSummariserReady} flag is set to \texttt{true}. Should \texttt{loadModel()} throw when loading, the exception is caught and the application is moved to an \texttt{IncompatibleDevice} error state. Although the \texttt{catch} handles all error types, the only possible error when loading is a device with too little RAM or a non-Intel GPU
+
+
 
 \subsubsection{Waiting for the Model at Summary Time}
 Once a final transcript is available, the processing thread must ensure the model is ready before calling \texttt{generateTranscription()}. It does this in two steps:

@@ -1,0 +1,18 @@
+\section{UI Orchestration}
+\subsection{Design}
+A WinUI3 \texttt{MainWindow} starts as a single XAML file with a single code-behind translation unit. As the application grew this would have become unmanageable: by the end of the project, \texttt{MainWindow} owned a recorder, a transcription engine, a summarisation engine, a doctor embedding, a guideline indexer, a guideline RAG instance, a JSON appraisals store and the corresponding click handlers for each. Rather than introduce a \texttt{ViewModel}-style abstraction, which would have required a large amount of boilerplate to bridge MVVM patterns into the C++/WinRT framework, the implementation keeps the single \texttt{MainWindow} class but spreads its definition across several translation units:
+
+\subsection{Implementation}
+The decoupling of the \texttt{MainWindow} class is as follows
+
+\begin{itemize}
+    \item \texttt{MainWindow.Initialisation.cpp} owns \texttt{InitialiseTranscription()} and the launches the summarisation and RAG loaders.
+    \item \texttt{MainWindow.Recording.cpp} owns the start/stop/cancel recording handlers and the processing-thread lambda that handles the audio recording to summarisation pipeline
+    \item \texttt{MainWindow.Saving.cpp} owns transcript, summary and appraisal export through the WinRT \texttt{FileSavePicker}.
+    \item \texttt{MainWindow.State.cpp} owns the \texttt{SetAppState()} state machine implementation.
+    \item \texttt{MainWindow.Appraisal.cpp} and \texttt{MainWindow.DisplayAppraisals.cpp} own the JSON appraisal store and the corresponding UI list view.
+    \item \texttt{MainWindow.Guidance.cpp} owns the file picker for adding PDFs, the indexer driver and the View Guidance click handler.
+    \item \texttt{MainWindow.Settings.cpp} owns the persistent-settings flyout menu.
+\end{itemize}
+
+All translation units sit inside \texttt{namespace winrt::ClinicalSummarisation::implementation} contributing methods to a single \texttt{MainWindow} class definition. The header (\texttt{MainWindow.xaml.h}) declares every member method and attribute, where each \texttt{.cpp} file implements an abstracted subset. This approach was taken due to an almost 1-1 mapping of model and view. A controller would have added additional abstraction boilerplate layer to map each model with a corresponding view which is unecessary for an application with very few deviations from a sequential flow.
