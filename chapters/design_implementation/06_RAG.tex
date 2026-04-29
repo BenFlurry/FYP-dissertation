@@ -20,7 +20,7 @@ Although a naive token window chunking method would provide uniform vectors and 
 
 The HNSW graph persists alongside the SQLite database in a \texttt{nice\_guidelines.bin} file which holds the embeddings tree. Any PDF files uploaded by the user will be copied into the MSIX sandbox to ensure external file movement is isolated from the application.
 
-\subsubection{ANN Search}
+\subsubsection{ANN Search}
 HNSWLib's hierarchical navigable small worlds index gives sub-linear search time at the cost of a small recall drop relative to exact $k$-NN searches. This trade-off is acceptable for clinical guidance retrieval, where the system is surfacing candidate passages for human review rather than answering definitively. Furthermore, as documents of any size can be added and removed at any time, the latency of embedding and searching is crucial to the application's usability. 
 
 \subsection{Implementation}

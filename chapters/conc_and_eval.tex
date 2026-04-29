@@ -1,0 +1,38 @@
+\chapter{Evaluation and Conclusion}
+% A summary of what the project has achieved. Make sure that you
+% address each goal set out in the Introduction chapter, to show that you
+% have achieved what you claimed you would. Don’t leave any loose
+% ends.
+% – A critical evaluation of the results of the project (e.g., how well were
+% the goals met, is the application fit for purpose, has good design and
+% implementation practice been followed, was the right implementation
+% technology chosen and so on).
+% – Future work. How could the project be developed if you had another 6
+% months. Take care to differentiate between what you have done to
+% satisfy your stated project goals, and work that could be done to meet
+% extended goals.
+% – Wrap-up and final thoughts on your project.
+\section{Achievements}
+(TODO reference all of this)
+This project has completed all of the goals set out in the introduction resulting in a feature rich proof-of-concept. The initial comparison between candidate medical LLMs showed a clear winner in the accuracy-speed tradeoff of medical summarisation and demonstrated the effectiveness of OpenVINO's model quantisation. A real time transcription-diarisation pipeline was implemented using the \texttt{Whisper-Medium} and \texttt{ECAPA-TDNN} models. An iterative approach to the UI design enabled an appeasing and user friendly end product, native to Windows. Finally, the application design using the orchestator and pipeline design patterns, and sub-implementations of the controllers resulted in an extensible application. 
+
+Outside of the goals, I produced 6 demonstration videos, one of which was presented at the shard to Intel and NHS stakeholder. The final build of the application was presented at a HP healthcare conference on the 29th April 2026. Finally, I featured on the UCL Computer Science LinkedIn page while conducting demonstrating to healthcare professionals and presented to 50 NHS doctors and hospital staff at the UCL Computer Science Showcase 2026.
+
+\section{Critical Evaluation}
+Client and public feedback through UAT, demonstrations and presentations ensured this project is fit for purpose. All requirements, goals and aims were achieved to a standard worthy of publishing for demonstrative and trialling purposes with aims of expanding this project within the UCL IXN. Outreach to medical professionals at events and within the Intel Health and Life Sciences team achieved the goal of creating excitement around this project and gathering feedback throughout the development process.
+
+The application design followed software engineering principles, primarily through a clear separation of concerns. The concurrent architecture isolated the user interface thread from the computationally expensive model inferencing tasks, ensuring that the interface remained responsive throughout the consultation lifecycle. The data management strategy cleanly separated transient data from persistent records, such as appraisal JSON files and the SQLite database. From an implementation perspective, the use of interface abstraction allowed for the injection of mock objects, facilitating the isolated unit testing of components. The decision to manage the entire user interface state within a single \texttt{MainWindow} class, split across multiple translation units, presents a slight deviation from standard Model-View-ViewModel (MVVM) patterns. While this avoided extensive boilerplate code and suited the sequential workflow of the application, it may introduce maintainability challenges if the user interface requires significant expansion in future iterations. On the contrary, this facilitated the rapid development of a project with a very broad scope. Overall, the iterative prototyping methodology, supported by regular stakeholder feedback, ensured that the system remained aligned with clinical requirements while adhering to the hardware constraints.
+
+The development process was generally effective. Frequent meetings with supervisors and clients enabled the direction of the project to remain aligned and additional features to be considered. However, a misconception around the feasibility of using the NICE API for a retrieval solution resulted in their requirements misaligning with our offline solution. This required a re-design of how medical guidance would be added to the application resulting in the current method of doctors uploading guidance they've already downloaded onto their devices. This assumption cost both development time and better integration into existing medical resources.
+
+\section{Future Work}
+Although this proof-of-concept project reached all of the "must have" and "should have" requirements, the iterative approach generated many ideas that were out of scope for the project. Although a trial with Dr Tazeen Ahmed at St. Georges Hospital was planned, the cyber attack in March-April 2026 prevented progress in receiving approval. Gaining permission to carry out clinical trials may be a challenge, however, gathering quantitative data on the time saving and removal of documentation stress would evaluate this project's ambition. Furthermore, a clinical trial would allow for GP feedback on pain points within the application and ideas on how to extend further. Most of the out-of-scope features that will be discussed here originated from demonstrations and trials.
+
+A large blocker during this project was access to the NICE API. Their strict data protection and distribution requirements prevented full integration with the medical guidance documentation with a work around being implemented. With access to the API, a hybrid online-offline approach would enable a daily download of the latest guidance changes for the retrieval pipeline to query. Quantitative testing on the effectiveness of the retrieval would also be possible with access to the 300+ PDF documents within the database.
+
+Although translation was considered during meetings, it fell out-of-scope for this project. An additional pipeline could be constructed on top of the current transcription pipeline to provide in-conversation translation to increase the accessibility of this project. Further recording work could involve a "Hey Ambience" buttonless start with voice commands throughout the application. Finally, a speech-to-text method of inputting appraisal notes was added as a "could have" by Dr Atia Rafiq and would be a simple extension of the current transcription pipeline.
+
+To improve the summarisation accuracy and enable larger prompts, developments in Intel AI PC technology and OpenVINO quantisation could allow larger models up to 100B parameters to run offline increasing the power of the summarisation. A very recent development showed a 120B model running on 32GB of RAM demonstrating its feasibility\cite{gpt120b}. Further summarisation expansions would involve creating a natural language summary for GPs to explain a diagnosis in non-specialist language and integrating guidelines within the summary itself.
+
+\section{Conclusion}
+To conclude, this project was a success for myself and the stakeholders. Personally, I learned a new programming language, development environment, packaging environment and font-end stack. This lead to lots design and planning, with many teething problems throughout the highly challenging yet enjoyable development journey. Overall, this project acts as the first building block towards offline AVT solutions for Intel and the NHS to reduce the time taken and fatigue caused by note taking and documentation within clinical consultations throughout healthcare.

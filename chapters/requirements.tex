@@ -78,7 +78,7 @@ F9 & After summarisation, the application must retrieve and display the sections
 F10 & Retrieved guidance must be displayed within an embedded PDF viewer with the relevant sections visually highlighted. \\
 F11 & The application must provide clear visual feedback during long-running operations (transcription, summarisation, guidance retrieval) so the user is aware of the current processing state. \\
 F12 & The application must provide a responsive, intuitive Windows-native user interface suitable for clinicians with varying levels of technical proficiency. \\
-F13 & A help and information section must be available to the user at all times providing necessary legal disclaimers and help for each section of the application
+F13 & A help and information section must be available to the user at all times providing necessary legal disclaimers and help for each section of the application\\
 \bottomrule
 \end{tabularx}
 \caption{Functional requirements (Must Have)}
@@ -138,7 +138,7 @@ NF5 & Security & The application must encrypt the doctor's voice embedding as th
 NF6 & Security & The application must make zero outbound network requests during operation, ensuring patient data never leaves the device. \\
 NF7 & Usability & The interface must be navigable by clinicians with no prior training, using standard Windows UI conventions and clear labelling. \\
 NF8 & Usability & All primary workflows (start recording, stop recording, view summary, view guidance) must be achievable within three clicks from the main screen. \\
-NF9 & Reliability & The application must handle errors during model inference (e.g.\ out-of-memory) gracefully, displaying an informative error message without crashing. \\
+NF9 & Reliability & The application must handle errors during model inference (e.g. incompatible device) gracefully, displaying an informative error message without crashing. \\
 NF10 & Maintainability & The codebase must follow a modular architecture with separation between UI, data processing and model inference components to enable future extensions\\
 NF11 & Portability & The application must run on any Intel AIPC meeting the hardware specification in T3 without requiring manual driver or dependency installation by the end user. \\
 \bottomrule

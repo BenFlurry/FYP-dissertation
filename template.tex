@@ -15,6 +15,9 @@
 \usepackage{tikz}
 \usepackage{hyperref}
 \usepackage{listings}
+\usepackage{pgfplots}
+\usepackage{multicol}
+
 \usetikzlibrary{arrows.meta, bending}
 
 \lstset{basicstyle=\ttfamily\small}
@@ -47,8 +50,7 @@ $\Box$ \end{quotation}}
 
 
 \title{{\vspace{-14em} \includegraphics[scale=0.4]{ucl_logo.png}}\\
-{{\Huge Clinical Summarisation and Advice for Intel AIPC}}\\
-{}\\
+{\Huge Clinical Summarisation and Advice for Intel AIPC}\\
 }
 \date{Submission date: 1st May 2026}
 \author{22004608\thanks{
@@ -85,13 +87,19 @@ Prof. Dean Mohamedally (UCL), Costas Stylianou (Intel)}
 \include{chapters/context}
 \include{chapters/requirements}
 \include{chapters/design_implementation}
+\include{chapters/testing}
+\include{chapters/conc_and_eval}
 
 \appendix
 
 \bibliographystyle{unsrt}
 \bibliography{main}
 
+\include{chapters/appendix/test_execution_matrix}
 \include{chapters/appendix/prompt}
+\include{chapters/appendix/test_transcription}
+\include{chapters/appendix/test_diarisation}
+\include{chapters/appendix/user_manual}
 \chapter{Other appendices, e.g., code listing}
 Put your appendix sections here
 \end{document}
