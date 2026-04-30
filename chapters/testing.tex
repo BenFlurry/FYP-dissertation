@@ -16,11 +16,12 @@
 % chapter could well be more substantial.
 
 \section{Strategy}
-The testing strategy for this project uses requirement driven testing to systematically evaluate the system against the technical, functional and non-functional requirements. This was conducted through unit testing, end-to-end testing, performance/ accuracy testing and user acceptance testing in iterative stages through the development process. A test execution matrix was created based on the requirements to ensure all requirements map to a quantifiable test case.
+The testing strategy for this project uses requirement driven testing to systematically evaluate the system against the technical, functional and non-functional requirements. This was conducted through unit testing, end-to-end testing, performance/ accuracy testing and user acceptance testing in iterative stages through the development process. A test execution matrix was created based on the requirements to ensure all requirements map to a quantifiable test case. (TODO CITE)
 
 \section{Functional Testing}
 Functional testing evaluates the application's ability to execute its core workflows and manage data correctly. This is conducted with unit tests for individual components and pipelines using Visual Studio's integrated test runner. The \texttt{gtest} library was chosen due to the integration within the Visual Studio environment allowing for quick configuration and running of the tests. When creating the unit tests for the first prototype of the application (transcription/summarisation pipeline), the architecture for the program prevented mocking external libraries. All external library and model calls were extracted to an interface to allow for a seam to provide a secure entry into the class. The tests then implement a mock interface to inject into the function for testing. The resulting design required minimal code change and no functionality change while allowing for proper mocking of back-end functionalities. An example is shown below.
 
+(TODO change to summarisaiton example)
 \begin{verbatim}
 GuidelineRAG.cpp
 // extract external calls to an interface
@@ -74,6 +75,7 @@ TEST(GuidelineRAG, UsesInjectedBackendForInitialize) {
 
 This strategy was used throughout the program, allowing for the creation of mock classes for robust unit testing. The full list of unit tests are in the appendix \ref{app:unittest}
 
+(TODO fill in here with text explaining)
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.5\linewidth]{unittest.png}
@@ -82,7 +84,7 @@ This strategy was used throughout the program, allowing for the creation of mock
 \end{figure}
 
 \section{Performance Testing}
-Performance testing was conducted to verify that the application meets teh latency and responsiveness constraints defined in requirements NF1-4. All tests were executed on the target Intel AI PC.
+Performance testing was conducted to verify that the application meets the latency and responsiveness constraints defined in requirements NF1-4. All tests were executed on the target Intel AI PC.
 
 \begin{table}[H]
 \centering

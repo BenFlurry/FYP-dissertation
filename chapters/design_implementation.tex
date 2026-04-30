@@ -46,18 +46,18 @@
 % This is a core chapter in your report and will usually be quite substantial, 10
 % pages or more.
 
-For the ease of the reader, the design and implementation chapter will provide an overview of the system architecture before moving to a chronological path of prototypes created during development. As per a typical software engineering project, after the requirements mapping and feasibility study was conducted, each component of the application was designed, then implemented in an iterative format. This chapter will follow this pattern to show the journey the project took from a simple summarisation engine prototype to a complete Microsoft Store application.
+For the ease of the reader, the design and implementation chapter will provide an overview of the system architecture before moving to a chronological path of the user flow throughout the application. As per a typical software engineering project, after the requirements mapping and feasibility study was conducted, each component of the application was designed, then implemented in an iterative format. This chapter will follow the path the user takes through the application through the audio-transcription-summarisation pipeline through to appraisals then guidance retrieval.
 
 \section{Application Design Overview}
 \subsection{Concurrency}
-To begin, the largest factor in the design of the application is the concurrency pipelining. This design separates lengthy model loading and inference times from each other and the UI thread to ensure the application remains responsive and model inference remains timely, addressing project requirements F2, NF1 and NF4. This would be impossible on a single thread as the audio processing alone would block the main UI thread. Based on the requirements, the following concurrent architecture was designed.
+To begin, the largest factor in the application design is the concurrency pipelining. This design separates lengthy model loading and inference times from other models and the UI thread. This ensures the application remains responsive, addressing project requirements F2, NF1 and NF4. This would not be possible on a single thread as the audio processing alone would block the main UI thread. Based on the requirements, the following concurrent architecture was designed.
 
 \begin{itemize}
     \item A \textbf{UI thread} managed by the WinRT framework, handling all rendering and user interaction.
-    \item An \textbf{audio capture thread} that continuously reads from the microphone and publishes to a shared with the transcription pipeline throughout the conversation.
-    \item A \textbf{transcription thread} that consumes buffered audio every 30 seconds, runs inference via Whisper-Medium then diarisation via ECAPA-TDNN, and dispatches labelled text back into a buffer in UI thread.
-    \item A \textbf{summarisation thread} that loads the Med42-8B summarisation model into the GPU from program launch, then runs Med42-8B inference after the conversation ends, dispatching the result to the UI thread on completion.
-    \item A \textbf{RAG thread} that loads MedCPT from program launch, then when required computes the summary embedding, queries the HNSWLib index, and retrieves matched guidance chunks.
+    \item An \textbf{audio capture thread} that continuously reads from the microphone and publishes to a shared buffer with the transcription pipeline throughout the conversation.
+    \item A \textbf{transcription thread} that consumes buffered audio every 30 seconds, runs inference via Whisper-Medium then diarisation via ECAPA-TDNN, and dispatches a labelled transcription into the summarisation thread
+    \item A \textbf{summarisation thread} that loads the Med42-8B summarisation model into the GPU from program launch, then runs Med42-8B inference upon receiving a transcript, dispatching the result to the UI thread on completion.
+    \item A \textbf{RAG thread} that loads MedCPT from program launch, then awaits a summary from the UI thread. It then computes the summary embedding, queries the HNSWLib index, and retrieves matched guidance chunks.
 \end{itemize}
 
 Here is a diagram to demonstrate how the different pipelines interact during a conversation. Note that the audio thread, audio transcription bridge and transcription pipeline have been merged into one swimlane for brevity and will be expanded upon later (TODO link)
@@ -69,46 +69,46 @@ This threading model also maps naturally onto the heterogeneous compute resource
 \subsection{Class Overview}
 Figure~\ref{fig:uml_brief} illustrates the high-level object-oriented architecture of the application, demonstrating how the concurrent threads detailed in the previous section map to specific C++ classes. The architecture follows a modular approach, orchestrated by the \texttt{MainWindow} class executing on the UI thread. 
 
-The architecture is divided into the 4 main pipelines required to handle transcription, summary, RAG and UI orchestration. 
+The architecture is divided into the 4 main components along with their corresponding colour in diagram \ref{fig:uml_brief} 
 \begin{itemize}
-    \item \textbf{Audio-Transcription Pipeline (Pink, Yellow and Orange):} This pipeline handles all recording, transcription and components. The interactions within the pipeline are as follows:
+    \item \textbf{Audio-Transcription Pipeline (Pink, Yellow and Orange):} This pipeline handles all recording, transcription and diarisation. The interactions within the pipeline are as follows:
     \begin{itemize}
-        \item \textbf{Audio Recording and Processing (Orange)}: The \texttt{AudioRecorder} class handles all audio recording, generating an \texttt{AudioStructure} containing 30 second chunks of audio data and additional metadata required for transcription and diarisation. Every 30 seconds, the UI orchestrator thread signals for this \texttt{AudioStructure} to be published into the \texttt{AudioTranscriptionBridge}.
+        \item \textbf{Audio Recording and Processing (Orange)}: The \texttt{AudioRecorder} class handles all audio recording, generating an \texttt{AudioStructure} containing 30 second chunks of audio data and additional metadata required for transcription and diarisation. Every 30 seconds, this is published into the \texttt{AudioTranscriptionBridge}.
         \item \textbf{Audio Transcription Bridge (Yellow)}: A thread safe buffer holding the previous and next 30 seconds of audio, preventing transcription from blocking audio recording.
-        \item \textbf{TranscriptionEngine (Pink)}: Subscribes to the \texttt{AudioTranscriptionBridge} to consume 30 second chunks of audio,  handling transcription then diarisation using the \texttt{DoctorEmbedding}, then appending the diarised transcript to the full transcript within the class.
+        \item \textbf{TranscriptionEngine (Pink)}: Subscribes to the \texttt{AudioTranscriptionBridge} to consume the audio chunks, handling transcription then diarisation using the \texttt{DoctorEmbedding} to compute the cosine similarity, then appending the diarised transcript to the full transcript held as a class member
     \end{itemize}
-    \item \textbf{SummarisationEngine (Green)}: A class to handle all summarisation, receiving a transcript and generating a summary, and signalling to the \texttt{MainWindow} once complete. This class also sends a signal to the \texttt{MainWindow} indicating once the model has loaded in case the conversation finishes first.
+    \item \textbf{SummarisationEngine (Green)}: A class to handle all summarisation, receiving a transcript from the audio-transcription pipeline and generating a summary, and signalling to the \texttt{MainWindow} once complete. This class also sends a signal to the \texttt{MainWindow} indicating once the model has loaded in case the conversation finishes first.
     \item \textbf{RAG (Pale):} Document chunking, vector indexing, and SQLite database interactions are isolated within the \texttt{GuidelineIndexer} and \texttt{GuidelineRAG} classes, returning the \texttt{GuidelineResult} to the \texttt{MainWindow} to be displayed.
-    \item \textbf{UI and Orchestration (Blue)}: Controls all threads, their lifetimes and signals for the start and end of the recording pipeline, start of summarisation and start of fetching guidelines. The \texttt{MainWindow} class is broken into several sub-classes for each UI component, which acts as a controller for their corresponding models.
+    \item \textbf{UI and Orchestration (Blue)}: Controls the instantiation of all pipelines and orchestrates the start of the audio-transcription-summarisation and retrieval pipelines. The \texttt{MainWindow} class is broken into a sub-class per UI component, which acts as a controller for their corresponding models.
 \end{itemize}
 
 \subsection{Orchestration}
-Although the UI class controls the threading and flow of this application, the sub-class architecture omitted for brevity ensures this class is not overloaded with different purposes. This is handled through the naming convention: \texttt{MainWindow.<ComponentName>.xaml.cpp} combined with the \texttt{namespace winrt::ClinicalSummarisation::implementation} declaration, which results in 1 \texttt{MainWindow} class with multiple implementation files for ease of development. The orchestrator architecture and design decision will be expanded upon in the future. (TODO link)
+Although the UI class controls the threading and flow of this application, the sub-class architecture ensures this class is not overloaded with different purposes. This is handled through the naming convention: \texttt{MainWindow.<ComponentName>.xaml.cpp} combined with the \texttt{namespace winrt::ClinicalSummarisation::implementation} declaration, which results in 1 \texttt{MainWindow} class with multiple implementation files for ease of development. The orchestrator architecture and design decision will be expanded upon in the future. (TODO link)
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=1\linewidth]{chapters/finalcolour.drawio.png}
-    \caption{This figure shows an overview of the classes and their interactions within the application colour coded based on the threads they occupy. All class methods and attributes except MainWindow have been removed for visual clarity}
+    \caption{This figure shows an overview of the classes and their interactions within the application colour coded based on the threads they occupy. Some methods and attributes have been removed for clarity.} 
     \label{fig:uml_brief}
 \end{figure}
 
 \section{Environment}
-The selection of Visual Studio as the primary development environment was motivated by two factors. Firstly, the integrated MSIX packaging project template facilitated streamlined deployment, including sideloading and publishing. Secondly, the IDE provided a graphical interface for configuring compiler and linker paths for multiple third-party libraries within the MSIX sandbox.
+The selection of Visual Studio as the primary development environment was motivated by two factors. First, the integrated MSIX packaging project template facilitated streamlined deployment, including sideloading and publishing. Secondly, the IDE provided a graphical interface for configuring compiler and linker paths for multiple third-party libraries within the MSIX sandbox.
 
 \subsection{Packaging, Publishing and Deployment}
-The solution architecture utilises the MSIX packaged project template, dividing the workspace into a primary source code project, \texttt{ClinicalSummarisation}, and a dedicated packaging project, \texttt{ClinicalSummarisation (Package)}. This structural separation isolates the compilation of the application logic from the generation of the final deployment payload. 
+The solution architecture utilises the MSIX packaged project template, dividing the workspace into a primary source code project, \texttt{ClinicalSummarisation}, and a dedicated packaging project, \texttt{ClinicalSummarisation (Package)}. This structural separation isolates the compilation of the application logic from the generation of the MSIX sandbox and linking of external libraries
 
-This approach provides flexibility regarding deployment type. By "deploying" the application, it cleans, builds and loads the application onto the device to be ran through the Windows start menu. By "Publishing" the app with the self sign dialog, a \texttt{MSIXBUNDLE} file is created with a self-signed certificate to be side-loaded onto other devices. By "Publishing" the app with the Microsoft Store dialog, publisher crendentials are added to create a \texttt{MSIXBUNDLE} that can be uploaded to the Microsoft Store upload page to be published on the app store. I created a document covering all the criteria required in the Microsoft Store publishing process (TODO link)
+This approach provides flexibility regarding deployment type. By "deploying" the application, the platform cleans, builds and side-loads the application onto the device to be ran through the Windows start menu. By "Publishing" and self signing the app, a \texttt{MSIXBUNDLE} file is created with a certificate to be side-loaded onto other devices. By "Publishing" and leaving the app unsigned, a publisher can sign the \texttt{MSIXBUNDLE} to be released publicly. 
 
 
 \subsection{Library Linking}
-The ML model files were housed directly within the packaging project directory and assigned a copy execution directive within the file properties. This configuration instructs the build system to embed the large model assets directly into the generated application package. Upon deployment, the models are automatically unpacked into the application's local installation directory. This design decision guarantees the models are immediately accessible to the application at runtime
+The ML model files were housed directly within the packaging project and assigned a copy execution directive within the file properties. This configuration instructs the build system to embed the large model assets directly into the generated application package. Upon deployment, the models are unpacked into the MSIX sandbox.
 
 Managing third-party dependencies in C++ requires configuration of header includes and library, binaries and DLL linkages. To maintain a structured codebase \texttt{External} directory at the root of the solution. The Visual Studio GUI was used to define the include directories and linker inputs for these external packages. This approach ensures that the compiler correctly resolves external API calls during the build phase and that the necessary DLLs are mapped correctly. By explicitly defining these paths within the project properties, the build system ensures that all libraries are bundled into the MSIX sandbox. This prevents runtime module execution failures when the application is deployed to an external environment, as the sandbox guarantees the environment contains identical dependencies to the development environment.
 
 
-\input{chapters/design_implementation/01_summarisation_engine}
 \input{chapters/design_implementation/02_transcription_pipeline}
+\input{chapters/design_implementation/01_summarisation_engine}
 \input{chapters/design_implementation/03_UI}
 \input{chapters/design_implementation/04_UI_orchestration}
 \input{chapters/design_implementation/05_appraisals}

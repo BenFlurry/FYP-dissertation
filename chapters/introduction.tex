@@ -1,19 +1,20 @@
 \chapter{Introduction}
-This research investigates the application of on-device machine learning and clinical administration through the development of an offline Windows application. As a proof-of-concept, the primary objective is to evaluate the feasibility of a native Windows application running on an Intel AI PC to autonomously record consultations, transcribe audio, perform speaker diarisation, generate clinical summaries, and retrieve medical guidance within an entirely offline environment.
+% TODO The application of on device machine learning to clinical note taking -> more specific
+This research investigates the application of on-device machine learning to summarise clinical consultations. As a proof-of-concept, the primary objective is to evaluate the feasibility of an offline machine learning pipeline running on Intel AI PC hardware. This aims to reduce an NHS GP's workload by autonomously recording and transcribing consultations, generating clinical summaries, and retrieving medical guidance within an entirely offline environment. %TODO split into 2 sentences (within an NHS clinician environment etc -> this is a bag of words
 
-While existing cloud-based systems such as TORTUS AI, Heidi Health, and Nuance DAX Copilot highlight the utility of automated clinical documentation within healthcare, they rely on networked deployment, extensive integration, and external data processing \cite{tortus_product_2026,heidi_product_2026,dictationdirect_dax_features_2026}. In the context of the National Health Service (NHS), these dependencies introduce significant data governance and infrastructural challenges. Consequently, developing an offline proof-of-concept provides a mechanism to evaluate an alternative deployment architecture designed to address these specific operational constraints.
+While existing cloud-based systems such as TORTUS AI, Heidi Health, and Nuance DAX Copilot highlight the utility of automated clinical documentation within healthcare, they rely on networked deployment, extensive integration, and external data processing \cite{tortus_product_2026,heidi_product_2026,dictationdirect_dax_features_2026}. In the context of the NHS, these dependencies introduce significant data governance and infrastructural challenges. Consequently, developing an offline proof-of-concept provides a mechanism to evaluate an alternative deployment architecture designed to address these specific operational constraints.
+
+This project was developed as part of the UCL IXN in partnership with Intel with consultation from Dr. Atia Rafiq, an NHS GP and GP trainer and Dr. Tazeen Ahmed an NHS Rheumatology Care Group Lead.
 
 \section{Problem Overview}
-In a consultation, documentation competes directly with attention. A doctor needs to listen, ask follow-up questions, reason about symptoms, and still produce a record that is accurate  for later clinical use. The usual consultation flow is as follows: type during the appointment, take notes on paper, and reconstruct the encounter afterwards from memory. Each of these stages has their drawbacks. Typing during the consultation interrupts eye contact and changes the rhythm of the conversation and writing notes afterwards is slow and risks losing detail.
+In a consultation, a doctor needs to listen, ask follow-up questions, reason about symptoms, and still produce a record that is accurate for later clinical use. The usual consultation flow is as follows: type and take notes during the appointment, ask follow-up questions, and reconstruct the encounter afterwards. Each of these stages has their drawbacks. Typing during the consultation interrupts eye contact and changes the rhythm of the conversation and writing notes afterwards is slow and risks losing detail.
 
-The main idea of this project is to shift the administrative work into an on-device pipeline. The application records the conversation, transcribes and diarises (labelling sentences as doctor or patient) in real time, then produces a clinical summary after the consultation and searches uploaded guidance documents for relevant medical guidelines. In practice, the output of the consultation contains a transcript, a summary, and a link back to guidance that may help the clinician check what was discussed.
+The main idea of this project is to shift the administrative work into an on-device pipeline. The application records the conversation, transcribes and diarises (labelling sentences as doctor or patient) in real time, produces a clinical summary after the consultation, and searches uploaded guidance documents for relevant medical guidelines. In practice, the output of the consultation contains a transcript, a summary, and a link back to guidance that may help the clinician check what was discussed. This also provides a 
 
-Running the full pipeline locally introduces its own problems. Large language models are expensive to run. All models must be fast to load and infer enabled by an adequately designed concurrent pipeline ensuring the application remains responsive. Retrieval and summarisation has to be fast, otherwise it becomes one more waiting step in an already busy workflow. The system also has to fit into the constraints of the target platform, a native Windows Store application built with the MSIX packaged project platform and deployed as an MSIX package on Intel AIPC hardware.
-
-Those technical constraints are required to ensure this project remains within the niche of the current solutions. By relaxing these challenges, it no longer answers the question the project is set out to investigate.
+Running the full pipeline locally introduces its own problems. Large language models are expensive to run. All models must be fast to load and infer enabled by an adequately designed concurrent pipeline ensuring the application remains responsive. Retrieval and summarisation has to be fast, otherwise it becomes one more waiting step in an already busy workflow. The system also has to fit into the constraints of the target platform, a native Windows Store application built with the MSIX packaged project platform and deployed as an MSIX package on Intel AI PC hardware.
 
 \section{Aims}
-The project has three main aims.
+The project has three main aims:
 
 \begin{itemize}
     \item Evaluate whether the selected models and libraries are fast enough and accurate enough to support an offline workflow in practice.
@@ -27,26 +28,25 @@ A personal secondary aim is established based on the project requirements. The m
 From those aims, I defined the following concrete project goals:
 
 \begin{itemize}
-    \item Compare candidate pre-trained medical large language models (LLMs) under different quantisation levels and select a summarisation model that is feasible on the target hardware
-    \item Implement a real-time transcription pipeline using Whisper together with a diarisation model based on a pre-recorded voice embedding
-    \item Build a retrieval pipeline that allows clinicians to upload medical guidance PDFs and locate relevant sections from the generated consultation summary
-    \item Provide a Windows-native interface for recording, reviewing outputs, selecting and saving external files, and browsing retrieved guidance
+    \item Compare candidate pre-trained medical large language models (LLMs) under different quantisation levels and select a summarisation model that is feasible on the target hardware.
+    \item Implement a real-time transcription pipeline using Whisper together with a diarisation model based on a pre-recorded voice embedding.
+    \item Build a retrieval pipeline that allows clinicians to upload medical guidance PDFs and locate relevant sections from the generated consultation summary.
+    \item Provide a Windows-native interface for recording, reviewing outputs, selecting and saving external files, and browsing retrieved guidance.
     \item Structure the application so that future work, such as appraisal support or EPR integration, can be added without major rewrites.
 \end{itemize}
 
 These goals are intentionally narrower than the long-term ambitions of the product idea. For example, direct EPR integration, multilingual support, and patient-facing summaries are useful extensions, but they are not required to establish whether the core offline pipeline is viable for this proof-of-concept project.
 
 \section{Development Methodology}
-This project was developed iteratively. Early work focused on feasibility and rapid prototyping. Before spending time on interface design, I needed to evaluate whether the core summarisation pipeline could run within the required hardware by ensuring back-end latency remained within the constraints of the requirements. That led to a back-end first approach. I tested candidate models, measured inference times, and ruled out options that were either too slow or too large for the target device.
+This project was set out with two phases, feasibility followed by iterative development on a 1 week cycle. Initially a feasibility study was conducted to determine whether latency and accuracy within the summarisation pipeline could remain within the requirement specification. This involved testing candidate models by measuring inference times, and evaluating performance on a summarisation benchmark.
 
-Once the technical feasibility was determined, an iterative prototyping development approach built around weekly meetings with my external supervisor and regular discussion with my internal supervisor and the NHS clients. This enables a small starting feature pool to be iterated upon based on video presentations and demonstrations to supervisors and clients. The initial requirements were loose, only requiring the summarisation on device and were expanded to include AVT, medical guidance and appraisal entries. The video demonstrations verified alignment on the implementation of new requirements and promoted the project to potential clients including Dell, HP, Intel and the NHS. 
+Development began once technical this feasibility study concluded. Weekly meetings with my external supervisor and regular discussion with my internal supervisor and the NHS clients expanded the small starting feature pool. The initial requirements were loose, only needing the summarisation on device. Through demonstrations and feedback collection, these were expanded to include AVT, medical guidance and appraisal entries. The video demonstrations further verified alignment on the implementation of new requirements and promoted the project to potential clients including Dell, HP, Intel and the NHS. 
 
-Version control was central to this process. The project was maintained on GitHub, which made it practical to isolate experiments, preserve stable versions for demonstrations, and revert changes when a promising approach had fundamental flaws that required a reset to fix. That mattered most when integrating several highly linked libraries simultaneously with very different potential points of failure.
+The project is maintained on GitHub, which makes it practical to isolate experiments, preserve stable versions for demonstrations, and revert changes when a promising approach had flaws that required a reset to fix. This mattered most when integrating several highly linked libraries simultaneously with very different potential points of failure.
 
-This flexible nature of iterative prototyping suited a proof-of-concept project with several unknowns and multiple added and amended requirements. I prioritised expensive uncertainties first while maintaining a stable baseline for demonstrations to ensure later feasibility concerns would not result in large quantities of previous work being lost due to a potential shift in application requirements.
+This flexible development lifecycle suited a proof-of-concept project with several unknowns and regularly evolving requirements. By prioritising high-risk ambiguities in the requirements at the start of development, a stable baseline could be set for demonstrations, thus pre-empting repository refactors due to sudden shifts in requirements.
 
 \section{Overview}
-
 The remainder of this report is organised as follows.
 
 Chapter 2 reviews the background to the project, surveys comparable systems, and explains the choice of models, frameworks, and supporting libraries.

@@ -1,17 +1,18 @@
 \section{Transcription Pipeline}
 \subsection{Design}
 \subsubsection{Concurrency}
-The design of the transcription pipeline was created based on the parameters of the transcription and diarisation model. The \texttt{Whisper} family of models cannot natively transcribe live text, therefore we have to find a work around. A 30 second loop was chosen to maximise the capability of \texttt{Whisper} and reduce the chance an audio segment splices a word. The proposed design involved the following looping architecture:
+The design of the transcription pipeline was created based on the parameters of the transcription and diarisation model. The \texttt{Whisper} family of models cannot natively transcribe live text, therefore I present this architecture. A 30 second loop was chosen to maximise the capability of \texttt{Whisper} and reduce the chance an audio segment splices a word. First, the pipeline is loaded into memory in a new thread with the transcription and diarisation models loading onto the CPU. The thread signals to the UI thread upon completion. Once a signal from the UI thread is received to start, the following loop executed
 \begin{itemize}
     \item Record the audio in an audio thread.
-    \item Once 30 seconds of audio is recorded, publish the audio segment into an audio transcription buffer, a thread-safe queue held in the main window.
-    \item The transcription pipeline (hosting the transcription and diarisation models) consumes the audio segment in its own thread.
+    \item Once 30 seconds of audio is recorded, publish the audio segment into an audio transcription buffer, a thread-safe queue. 
+    \item The transcription pipeline (hosting the transcription and diarisation models) consumes the audio segment in the transcription thread.
     \item The audio is passed into the \texttt{Whisper} model.
     \item The \texttt{Whisper} model returns the transcription in a vector of time stamped transcription chunks split by natural pauses in speech.
     \item The audio segment is then split based on the time stamps from the transcription chunks and passed into the \texttt{ECAPA-TDNN} model.
     \item Each chunk is compared against the doctor's voice embedding to determine the speaker.
     \item The speaker label is added to each time stamped chunk and added to the transcript.
 \end{itemize}
+This repeats until a signal from the UI thread to finish recording is received.
 
 \begin{figure}[H]
 \centering
@@ -165,12 +166,12 @@ The design of the transcription pipeline was created based on the parameters of 
 \end{figure}
 
 \subsubsection{Pipelining}
-A pipeline architecture was used to handle the transcription and summarisation process. The transcription model requires 30 second segments of audio to generate a timestamped transcription. The diarisation model requires timestamps generated from the transcription to chunk the transcript into segments based on pauses in the conversation. In addition, the summarisation model requires a full diarised transcript to generate a summarisation. This lead to a pipeline approach, orchestrated by the UI thread, handling an audio stream as input and a summary as output. 
+A pipeline architecture was used to handle the audio recording, transcription and summarisation process. The transcription model requires 30 second segments of audio to generate a timestamped transcription. The diarisation model requires timestamps generated from the transcription to chunk the transcript into segments based on pauses in the conversation. This process loops until the recording is finished generating a full diarised transcript and passes this into the summarisation thread. This lead to a pipeline approach, orchestrated by the UI thread, handling an audio stream as input and a summary as output. 
 
-To handle the termination of the pipeline, a last chunk flag must be added to the audio segment's metadata in the audio recording component. Once published to the audio buffer then consumed by the transcription engine, this flag indicates to the pipeline to transfer the full transcript to the summarisation engine upon completion.
+To handle the termination of the pipeline, a last chunk flag must be added to the audio segment's metadata in the audio recording component. Once published to the audio buffer then consumed by the transcription engine, this flag indicates to the transcription engine to transfer the full transcript to the summarisation engine upon completion.
 
 \subsubsection{Doctor Voice Embedding}
-By recording 30 seconds of the doctor's voice, passing this into the \texttt{ECAPA-TDNN} model, and extracting the embedding, we can save this on device for all future use.
+By recording 30 seconds of the doctor's voice, passing this into the \texttt{ECAPA-TDNN} model, and extracting the embedding, we can save this on device for all future use. This is a one time event 
 
 \subsection{Implementation}
 The implementation is split across three classes: \texttt{AudioRecorder}, which captures raw audio via miniaudio; \texttt{AudioTranscriptionBridge}, a thread-safe queue owned by \texttt{MainWindow} that decouples recording from processing; and \texttt{TranscriptionEngine}, which hosts both Whisper and ECAPA-TDNN and runs \texttt{ProcessLoop()}.
@@ -215,7 +216,7 @@ void AudioRecorder::Flush(bool isLast) {
 The mutex protects \texttt{m\_currentBuffer} since \texttt{Stop()} can also call \texttt{Flush()} from the UI thread. Once 30 seconds of samples have accumulated, \texttt{Flush(isLastChunk = false)} copies exactly those samples into an \texttt{AudioChunk}, erases them from the front of the buffer, and pushes the chunk onto the bridge. When the user presses stop, \texttt{Flush(true)} fires with whatever remains, setting \texttt{isLastChunk = true} to signal end-of-stream.
 
 \subsubsection{The Audio Transcription Bridge}
-\texttt{AudioTranscriptionBridge} is a \texttt{std::queue<AudioChunk>} protected by a \texttt{std::mutex} and a \texttt{std::condition\_variable}. It is owned by value inside \texttt{MainWindow} and passed by pointer to both \texttt{AudioRecorder} and \texttt{TranscriptionEngine} at construction. \texttt{Pop()} blocks the transcription thread with no busy-waiting until a chunk is available, then removes and returns it atomically:
+\texttt{AudioTranscriptionBridge} is a \texttt{std::queue<AudioChunk>} protected by a \texttt{std::mutex} and a \texttt{std::condition\_variable}. It is owned by value inside \texttt{MainWindow} and passed by pointer to both \texttt{AudioRecorder} and \texttt{TranscriptionEngine} at program initialisation. \texttt{Pop()} blocks the transcription thread with no busy-waiting until a chunk is available, then removes and returns it atomically:
 
 \begin{verbatim}
 AudioChunk AudioTranscriptionBridge::Pop() {
@@ -230,27 +231,16 @@ AudioChunk AudioTranscriptionBridge::Pop() {
 Because \texttt{pop()} is called unconditionally before returning, consumption and removal are a single atomic operation with respect to the mutex. 
 
 \subsubsection{Transcription and Diarisation in ProcessLoop}
-\texttt{ProcessLoop()} runs on the detached transcription \texttt{m\_processingThread}. It loops, blocking on \texttt{Pop()} until a chunk arrives. Before passing audio to Whisper, amplitude normalisation is applied - if the peak amplitude is below 0.9 but above a noise floor of 0.001, a gain is applied to bring it to 0.9. This improves Whisper accuracy on quiet segments without clipping loud segments.
-
-Whisper is then invoked with timestamps enabled:
+\texttt{ProcessLoop()} runs on the detached transcription \texttt{m\_processingThread}. It loops, blocking on \texttt{Pop()} until a chunk arrives. Before passing audio to Whisper, amplitude normalisation is applied to increase accuracy on quiet segments. Whisper is then invoked with timestamps enabled:
 
 \begin{verbatim}
+// some configuration settings are omitted for brevity
 ov::genai::WhisperGenerationConfig config;
-config.max_new_tokens = 100;
 config.return_timestamps = true;
-config.num_beams = 3;
 auto result = m_pipeline->generate(audioChunk.audioData, config);
 \end{verbatim}
 
-Whisper returns a vector of segments, each carrying \texttt{start\_ts} and \texttt{end\_ts} in seconds. These timestamps are used to slice the corresponding audio back out of the original 30-second buffer and feed each clip to ECAPA-TDNN:
-
-\begin{verbatim}
-size_t startIdx = (size_t)(transcribedChunk.start_ts * 16000);
-size_t endIdx   = (size_t)(transcribedChunk.end_ts   * 16000);
-std::vector<float> clip(sourceAudio.begin() + startIdx, sourceAudio.begin() + endIdx);
-\end{verbatim}
-
-Clips shorter than 8000 samples (~0.5\,s) are skipped as too brief for a reliable speaker embedding. For longer clips, ECAPA-TDNN produces a fixed-length embedding which is compared to the enrolled doctor profile via cosine similarity. A threshold of 0.7 was determined empirically as appropriate for ECAPA-TDNN:
+Whisper returns a vector of segments, each carrying \texttt{start\_ts} and \texttt{end\_ts} in seconds. These timestamps are used to slice the audio at each whisper segment to pass into the diarisation model. ECAPA-TDNN produces a fixed-length embedding which is compared to the enrolled doctor profile via cosine similarity. A threshold of 0.7 was determined empirically as appropriate for ECAPA-TDNN (TODO link):
 
 \begin{verbatim}
 float score = SpeakerEncoder::CosineSimilarity(m_doctorProfile, currentEmbedding);
@@ -260,4 +250,4 @@ std::string speakerLabel = (score > 0.7f) ? "Doctor" : "Patient";
 Each labelled segment is appended to a \texttt{std::stringstream} transcript as \texttt{[Doctor]} or \texttt{[Patient]} followed by the Whisper text.
 
 \subsubsection{End-of-Stream Handling}
-After processing all segments in a chunk, the \texttt{isLastChunk} flag is checked. If set, \texttt{m\_isRunning} is set to \texttt{false}, causing the \texttt{while} loop to exit after the current chunk completes. \texttt{ProcessLoop()} then returns \texttt{m\_fullTranscript.str()} to the caller the transcription processing thread which passes it directly to the summarisation engine.
+After processing all segments in a chunk, the \texttt{isLastChunk} flag is checked. If set, \texttt{m\_isRunning} is set to \texttt{false}, causing the \texttt{while} loop to exit after the current chunk completes. \texttt{ProcessLoop()} passes the \texttt{m\_fullTranscription} directly to the summarisation engine.

@@ -16,3 +16,5 @@ The decoupling of the \texttt{MainWindow} class is as follows
 \end{itemize}
 
 All translation units sit inside \texttt{namespace winrt::ClinicalSummarisation::implementation} contributing methods to a single \texttt{MainWindow} class definition. The header (\texttt{MainWindow.xaml.h}) declares every member method and attribute, where each \texttt{.cpp} file implements an abstracted subset. This approach was taken due to an almost 1-1 mapping of model and view. A controller would have added additional abstraction boilerplate layer to map each model with a corresponding view which is unecessary for an application with very few deviations from a sequential flow.
+
+(TODO move to start of design adn implementation)
