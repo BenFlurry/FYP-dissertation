@@ -1,10 +1,10 @@
 \section{Transcription Pipeline}
 \subsection{Design}
 \subsubsection{Concurrency}
-The design of the transcription pipeline was created based on the parameters of the transcription and diarisation model. The \texttt{Whisper} family of models cannot natively transcribe live text, therefore I present this architecture. A 30 second loop was chosen to maximise the capability of \texttt{Whisper} and reduce the chance an audio segment splices a word. First, the pipeline is loaded into memory in a new thread with the transcription and diarisation models loading onto the CPU. The thread signals to the UI thread upon completion. Once a signal from the UI thread is received to start, the following loop executed
+The design of the transcription pipeline was created based on the parameters of the transcription and diarisation model. The \texttt{Whisper} family of models cannot natively transcribe live text, therefore I present this architecture.  First, the pipeline is loaded into memory in a new thread with the transcription and diarisation models loading onto the CPU. The thread signals to the UI thread upon completion. Once a signal from the UI thread is received to start, the following loop executed
 \begin{itemize}
-    \item Record the audio in an audio thread.
-    \item Once 30 seconds of audio is recorded, publish the audio segment into an audio transcription buffer, a thread-safe queue. 
+    \item Record the audio in the miniaudio controlled thread.
+    \item Once 30 seconds of audio is recorded (to maximise the effectiveness of the \texttt{Whisper} model\cite{radford2022whisper}, publish the audio segment into an audio transcription buffer, a thread-safe queue. 
     \item The transcription pipeline (hosting the transcription and diarisation models) consumes the audio segment in the transcription thread.
     \item The audio is passed into the \texttt{Whisper} model.
     \item The \texttt{Whisper} model returns the transcription in a vector of time stamped transcription chunks split by natural pauses in speech.
@@ -12,7 +12,7 @@ The design of the transcription pipeline was created based on the parameters of 
     \item Each chunk is compared against the doctor's voice embedding to determine the speaker.
     \item The speaker label is added to each time stamped chunk and added to the transcript.
 \end{itemize}
-This repeats until a signal from the UI thread to finish recording is received.
+This repeats until a signal from the UI thread to finish recording is received. Where the loop executes for the final segment.
 
 \begin{figure}[H]
 \centering
@@ -161,7 +161,7 @@ This repeats until a signal from the UI thread to finish recording is received.
 
 \end{tikzpicture}%
 }
-\caption{A diagram illustrating data flow between the Summarisation, UI, and Transcription threads during a standard 30-second recording cycle and upon receiving a termination signal. The Audio transcription buffer is a thread-safe buffer owned by the UI thread. This diagram represents the flow once the transcription and diarisation models have loaded}
+\caption{A diagram illustrating data flow between the Summarisation, UI, and Transcription threads during a standard 30-second recording cycle and upon receiving a termination signal. The Audio transcription buffer is a thread-safe buffer owned by the UI thread. This diagram represents the flow once the transcription and diarisation models have loaded.}
 \label{fig:transcription-pipeline-diagram}
 \end{figure}
 
@@ -171,7 +171,7 @@ A pipeline architecture was used to handle the audio recording, transcription an
 To handle the termination of the pipeline, a last chunk flag must be added to the audio segment's metadata in the audio recording component. Once published to the audio buffer then consumed by the transcription engine, this flag indicates to the transcription engine to transfer the full transcript to the summarisation engine upon completion.
 
 \subsubsection{Doctor Voice Embedding}
-By recording 30 seconds of the doctor's voice, passing this into the \texttt{ECAPA-TDNN} model, and extracting the embedding, we can save this on device for all future use. This is a one time event 
+By recording 30 seconds of the doctor's voice, passing this into the \texttt{ECAPA-TDNN} model, and extracting the embedding, we can save this on device for all future use. This is a one time event that enables a cosine similarity comparison against an audio chunk to determine which voice is speaking throughout that chunk
 
 \subsection{Implementation}
 The implementation is split across three classes: \texttt{AudioRecorder}, which captures raw audio via miniaudio; \texttt{AudioTranscriptionBridge}, a thread-safe queue owned by \texttt{MainWindow} that decouples recording from processing; and \texttt{TranscriptionEngine}, which hosts both Whisper and ECAPA-TDNN and runs \texttt{ProcessLoop()}.
@@ -230,18 +230,74 @@ AudioChunk AudioTranscriptionBridge::Pop() {
 
 Because \texttt{pop()} is called unconditionally before returning, consumption and removal are a single atomic operation with respect to the mutex. 
 
-\subsubsection{Transcription and Diarisation in ProcessLoop}
-\texttt{ProcessLoop()} runs on the detached transcription \texttt{m\_processingThread}. It loops, blocking on \texttt{Pop()} until a chunk arrives. Before passing audio to Whisper, amplitude normalisation is applied to increase accuracy on quiet segments. Whisper is then invoked with timestamps enabled:
+\subsubsection{Transcription}
+\texttt{ProcessLoop()} runs on the detached transcription \texttt{m\_processingThread}. It loops, blocking on \texttt{Pop()} until a chunk arrives. Before passing audio to Whisper, amplitude normalisation is applied to increase accuracy on quiet segments. Whisper is then invoked with timestamps enabled. The whisper model returns a vector of segments, each carrying \texttt{start\_ts} and \texttt{end\_ts} in seconds. These timestamps are used to slice the audio at each whisper segment to pass into the diarisation model. ECAPA-TDNN produces a fixed-length embedding which is compared to the enrolled doctor profile via cosine similarity. 
 
-\begin{verbatim}
-// some configuration settings are omitted for brevity
-ov::genai::WhisperGenerationConfig config;
-config.return_timestamps = true;
-auto result = m_pipeline->generate(audioChunk.audioData, config);
-\end{verbatim}
+\subsubsection{Diarisation}
+A threshold of 0.7 was determined empirically as appropriate for ECAPA-TDNN (TODO link):
 
-Whisper returns a vector of segments, each carrying \texttt{start\_ts} and \texttt{end\_ts} in seconds. These timestamps are used to slice the audio at each whisper segment to pass into the diarisation model. ECAPA-TDNN produces a fixed-length embedding which is compared to the enrolled doctor profile via cosine similarity. A threshold of 0.7 was determined empirically as appropriate for ECAPA-TDNN (TODO link):
+\subsubsection{Diarisation}
+The speaker diarisation model provides a score from 0-1 on how likely the person speaking is the doctor for a given audio chunk. Empirical testing was conducted to determine what the threshold value should be to decide if the doctor was speaking or someone else. By encoding the doctor as myself, 1 minute of audio was captured each for myself and a another person reading the introduction to this dissertation. 
 
+\begin{tikzpicture}
+\begin{axis}[
+    title={Speaker Diarisation Confidence/Metrics},
+    xlabel={Sample Index},
+    ylabel={Doctor Threshold},
+    xmin=1, xmax=10,
+    ymin=0, ymax=1, 
+    xtick={1,2,3,4,5,6,7,8,9,10},
+    ytick={0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0},
+    legend pos=south east,
+    ymajorgrids=true,
+    grid style=dashed,
+    width=12cm,
+    height=8cm
+]
+
+\addplot[
+    color=blue,
+    mark=square,
+    thick
+]
+coordinates {
+    (1, 0.42)
+    (2, 0.63)
+    (3, 0.51)
+    (4, 0.58)
+    (5, 0.47)
+    (6, 0.55)
+    (7, 0.63)
+    (8, 0.49)
+    (9, 0.60)
+    (10, 0.52)
+};
+\addlegendentry{Patient ($\mu = 54$)}
+
+\addplot[
+    color=red,
+    mark=triangle,
+    thick
+]
+coordinates {
+    (1, 0.79)
+    (2, 0.70)
+    (3, 0.84)
+    (4, 0.74)
+    (5, 0.78)
+    (6, 0.75)
+    (7, 0.72)
+    (8, 0.78)
+    (9, 0.76)
+    (10, 0.74)
+};
+\addlegendentry{Doctor ($\mu = 76$)}
+
+\end{axis}
+\end{tikzpicture}
+
+The full results can be examined in Appendix \ref{app:speaker_diarisation_results}.
+The results showed the average doctor score to be 0.76, with the patient score as 0.54, leading to the threshold value set at 0.7.
 \begin{verbatim}
 float score = SpeakerEncoder::CosineSimilarity(m_doctorProfile, currentEmbedding);
 std::string speakerLabel = (score > 0.7f) ? "Doctor" : "Patient";

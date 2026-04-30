@@ -1,0 +1,143 @@
+\chapter{Requirements}
+\label{app:requirements}
+Requirements are organised into four categories: general requirements covering project-level constraints and deliverables, technical requirements specifying platform and hardware constraints, functional requirements describing what the application must do, and non-functional requirements specifying quality attributes the application must exhibit prioritised with the MoSCoW system. Each requirement is assigned a unique identifier for traceability.
+
+\subsection{General Requirements}
+\label{app:greq}
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{ID} & \textbf{Requirement} \\
+\midrule
+G1 & The application must be delivered as a proof-of-concept demonstrating the feasibility of offline clinical AVT on Intel AIPC hardware. \\
+G2 & The application must be publishable to the Microsoft Windows Store as an MSIX packaged application. \\
+G3 & Video demonstrations and presentations must be delivered to clients and supervisors on request, tailored to the target audience and iteratively refined based on feedback. \\
+G4 & Workshops and presentations at relevant events must be attended to gather feedback from healthcare professionals and promote the project. \\
+G5 & The application must be designed with extensibility in mind so that future developers can extend this proof-of-concept towards an industry ready product. \\
+G6 & All source code must be hosted on GitHub with a branching strategy that supports parallel feature development and rollback. \\
+\bottomrule
+\end{tabularx}
+\caption{General requirements}
+\label{tab:greq}
+\end{table}
+
+\subsection{Technical Requirements}
+\label{app:treq}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{ID} & \textbf{Requirement} \\
+\midrule
+T1 & The front-end must be built with WinUI3 using XAML for the UI layer and C++/WinRT for the application logic. \\
+T2 & The back-end inference pipeline must use Intel's OpenVINO toolkit to execute all machine learning models on-device. \\
+T3 & The target hardware platform is an Intel AI PC with a minimum of 32\,GB system RAM, 18\,GB VRAM, and an integrated NPU. \\
+T4 & All machine learning models must be converted to OpenVINO IR format and quantised to int4 or int8 weight precision prior to distribution. \\
+T5 & The application must operate entirely offline with zero network communication to external services during all use cases. \\
+T6 & The development environment must facilitate the MSIX packaging platform. \\
+T7 & Pre-trained medical LLMs with no more than 10 billion parameters must be evaluated and selected to fit within the memory constraints of T3. \\
+T8 & The speech-to-text model must be from the Whisper family due to OpenVINO's native \texttt{WhisperPipeline} support. \\
+T9 & The application must record a conversation and process the audio stream in real time, building the transcription live during the conversation. \\
+T10 & The concurrent architecture must allow all models to run simultaneously in memory to avoid loading overheads. \\
+\bottomrule
+\end{tabularx}
+\caption{Technical requirements}
+\label{tab:treq}
+\end{table}
+
+\subsection{Functional Requirements}
+\label{app:freq}
+
+Functional requirements are prioritised using the MoSCoW method. \textit{Must Have} requirements define the minimum viable product. \textit{Should Have} requirements add significant value but are not blocking. \textit{Could Have} requirements are desirable extensions that fall outside the core scope.
+
+\subsubsection{Must Have}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{ID} & \textbf{Requirement} \\
+\midrule
+F1 & The user must be able to select an audio input device from any microphone connected to the laptop, including the built-in microphone as default. \\
+F2 & The application must diarise the conversation in real time by labelling each transcribed segment as either \texttt{[Doctor]} or \texttt{[Patient]}, based on a pre-recorded voice embedding of the doctor. \\
+F3 & The user must be able to record their voice before a consultation to generate the voice embedding used for diarisation. \\
+F4 & The recorded voice embedding must be saved and encrypted locally for use in future conversation. \\
+F5 & On completion of a conversation, the application must generate a clinical summary of the diarised transcript using a pre-trained medical LLM. \\
+F6 & The user must be able to save the transcript and summary to a user-specified location on the local file system. \\
+F7 & A default save location for summaries, transcripts and appraisal entries must be available for the user to select. \\
+F8 & The relevant NICE Guidelines must be found based on the summary. \\
+F9 & After summarisation, the application must retrieve and display the sections of uploaded medical guidance most relevant to the consultation summary, using a semantic search pipeline. \\
+F10 & Retrieved guidance must be displayed within an embedded PDF viewer with the relevant sections visually highlighted. \\
+F11 & The application must provide clear visual feedback during long-running operations (transcription, summarisation, guidance retrieval) so the user is aware of the current processing state. \\
+F12 & The application must provide a responsive, intuitive Windows-native user interface suitable for clinicians with varying levels of technical proficiency. \\
+F13 & A help and information section must be available to the user at all times providing necessary legal disclaimers and help for each section of the application\\
+\bottomrule
+\end{tabularx}
+\caption{Functional requirements (Must Have)}
+\label{tab:fmreq}
+\end{table}
+
+\subsubsection{Should Have}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{ID} & \textbf{Requirement} \\
+\midrule
+F14 & The user should be able to create appraisal entries from a completed summarisation, attaching free-text notes and tags to each entry. \\
+F15 & Appraisal entries should be searchable by name and filterable by tag. \\
+F16 & The user should be able to view, edit, and delete individual appraisal entries, and delete all entries at once. \\
+F17 & The application should support the upload and semantic searching of non-NICE medical guidance PDFs alongside NICE guidelines. \\
+\bottomrule
+\end{tabularx}
+\caption{Functional requirements (Should Have)}
+\label{tab:fsreq}
+\end{table}
+
+\subsubsection{Could Have}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{ID} & \textbf{Requirement} \\
+\midrule
+F18 & Multi-lingual transcription and translation support during conversation. \\
+F19 & Voice recording of post-consultation notes appended to the transcript. \\
+F20 & A patient-facing plain-language summary generated alongside the clinical summary. \\
+F21 & A voice-activated trigger (e.g.\ ``Hey Ambience'') to begin recording without pressing a button. \\
+F22 & Integration with EPR systems to export summaries directly into patient records. \\
+\bottomrule
+\end{tabularx}
+\caption{Functional requirements (Could Have)}
+\label{tab:fcreq}
+\end{table}
+
+\subsection{Non-Functional Requirements}
+\label{app:nreq}
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{ID} & \textbf{Category} & \textbf{Requirement} \\
+\midrule
+NF1 & Performance & The application must start and load all ML models into memory within 60 seconds of launch. \\
+NF2 & Performance & Summary generation must complete within 90 seconds of the conversation ending for a consultation of up to 15 minutes. \\
+NF3 & Performance & Semantic search over uploaded guidance documents must return results within 3 seconds. \\
+NF4 & Performance & The UI must remain responsive (no freezing or dropped frames) during all background processing operations including recording, transcription, and summarisation. \\
+NF5 & Security & The application must encrypt the doctor's voice embedding as this constitutes to biometric data\\
+NF6 & Security & The application must make zero outbound network requests during operation, ensuring patient data never leaves the device. \\
+NF7 & Usability & The interface must be navigable by clinicians with no prior training, using standard Windows UI conventions and clear labelling. \\
+NF8 & Usability & All primary workflows (start recording, stop recording, view summary, view guidance) must be achievable within three clicks from the main screen. \\
+NF9 & Reliability & The application must handle errors during model inference (e.g. incompatible device) gracefully, displaying an informative error message without crashing. \\
+NF10 & Maintainability & The codebase must follow a modular architecture with separation between UI, data processing and model inference components to enable future extensions\\
+NF11 & Portability & The application must run on any Intel AIPC meeting the hardware specification in T3 without requiring manual driver or dependency installation by the end user. \\
+\bottomrule
+\end{tabularx}
+\caption{Non-functional requirements}
+\label{tab:nreq}
+\end{table}

@@ -1,0 +1,62 @@
+\chapter{Requirements Traceability Matrix}
+\label{app:requirements_traceability}
+
+Table~\ref{tab:rtm} maps each requirement to the design decisions and system components that address it. This provides forward traceability from requirements to design, ensuring every requirement has a corresponding implementation strategy and no design decision exists without a motivating requirement.
+
+\begin{longtable}{l p{5.2cm} p{6.8cm}}
+\toprule
+\textbf{Req.} & \textbf{Design Decision} & \textbf{Realising Component(s)} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Req.} & \textbf{Design Decision} & \textbf{Realising Component(s)} \\
+\midrule
+\endhead
+\midrule
+\multicolumn{3}{r}{\textit{Continued on next page}} \\
+\bottomrule
+\endfoot
+\bottomrule
+\caption{Requirements traceability matrix mapping requirements to design decisions and components.}
+\label{tab:rtm}
+\endlastfoot
+G1 & Proof-of-concept scope; offline-first architecture & Full application pipeline \\
+G2, T6 & MSIX packaging with WinUI3 & Visual Studio MSIX project template \\
+G5 & Modular architecture with separated concerns & Layered component structure (UI, inference, data) \\
+G6 & Git branching strategy & GitHub repository with feature branches \\
+\midrule
+T1 & Native Windows front-end & WinUI3 XAML views, C++/WinRT click and state handlers \\
+T2 & On-device inference engine & OpenVINO C++ API \\
+T3 & Hardware based model selection & Int4/int8 quantised models sized for 32\,GB RAM, 18\,GB VRAM target device \\
+T4 & Pre-distribution quantisation & OpenVINO \texttt{optimum-cli} conversion \\
+T5 & No network calls; all models bundled locally & Bundled model weights in MSIX package; SQLite in-process database; HNSWLib in-memory index \\
+T7 & Sub-10B parameter constraint & Med42-8B selected after benchmarking \\
+T8 & Whisper family constraint & Whisper-Medium via OpenVINO \\
+T10 & Concurrency strategy \autoref{fig:concurrency-diagram} & Each model (except diarisation and translation) runs on different threads and devices\\
+\midrule
+F1 & Audio device enumeration & MiniAudio device listing API \\
+F2, T9 & Streaming audio capture with real-time transcription & Audio capture thread $\rightarrow$ shared buffer $\rightarrow$ transcription thread running Whisper-Medium and ECAPA-TDNN \\
+F3 & Cosine similarity of voice embeddings & ECAPA-TDNN model comparing segment embeddings against doctor embedding \\
+F4 & Voice enrolment workflow & Dedicated UI dialog, ECAPA-TDNN embedding computation, encrypted local storage of embedding \\
+F5 & Post-conversation LLM inference & Summarisation thread running Med42-8B on GPU via OpenVINO \\
+F6 & File save dialog & Windows native file picker via WinRT API \\
+F7, F8 & Document management UI & Guidance view with upload/delete controls, SQLite metadata table \\
+F9 & Semantic search pipeline & MedCPT embedding of summary $\rightarrow$ HNSWLib ANN query against guidance embeddings \\
+F10 & Embedded PDF viewer with highlighting & MuPDF rendering with bounding-box overlays \\
+F11 & Async processing with UI feedback & Progress indicators and status text updated from background threads via WinUI3 dispatcher \\
+F12 & Three-view navigation structure & NavigationView with Recording, Appraisals, and Guidance pages \\
+F13 & Persistent UI help/info buttons & Help/info flyout\\
+F14-F16 & Appraisal CRUD with tagging & JSON appraisals storage, tag filtering and sorting, dialog-based CRUD modifications \\
+F17 & Generic PDF support in RAG & MedCPT chunking and embedding pipeline applied to any uploaded PDF\\
+\midrule
+NF1 & Real time transcription & Dedicated transcription threaded pipeline\\
+NF2 & Summary within 90\,s & Med42-8B int4 on GPU; prompt engineering to constrain output length \\
+NF3 & Guidance retrieval within 3\,s & Pre-indexed HNSWLib graph; MedCPT embedding computation \\
+NF4 & UI never blocks & Multi-threaded architecture, dispatcher-based UI updates \\
+NF5 & Encryption at rest & Encrypted voice embedding file \\
+NF6 & Zero outbound network traffic & No HTTP/socket calls in codebase\\
+NF7--8 & Intuitive three-click workflows & Standard WinUI3 controls, NavigationView, minimal dialog depth \\
+NF9 & Graceful error handling & Try-catch around OpenVINO inference calls, user-facing error dialogs \\
+NF10 & Modular codebase & Separated UI layer, audio module, inference module, data-access module \\
+NF11 & No manual dependency install & All dependencies bundled in MSIX package \\
+\end{longtable}

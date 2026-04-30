@@ -1,6 +1,5 @@
 \chapter{Introduction}
-% TODO The application of on device machine learning to clinical note taking -> more specific
-This research investigates the application of on-device machine learning to summarise clinical consultations. As a proof-of-concept, the primary objective is to evaluate the feasibility of an offline machine learning pipeline running on Intel AI PC hardware. This aims to reduce an NHS GP's workload by autonomously recording and transcribing consultations, generating clinical summaries, and retrieving medical guidance within an entirely offline environment. %TODO split into 2 sentences (within an NHS clinician environment etc -> this is a bag of words
+This research investigates the application of on-device machine learning to summarise clinical consultations. As a proof-of-concept, the primary objective is to evaluate the feasibility of an offline machine learning pipeline running on Intel AI PC hardware. This aims to reduce an NHS GP's workload by autonomously recording and transcribing consultations, generating clinical summaries, and retrieving medical guidance within an entirely offline environment. 
 
 While existing cloud-based systems such as TORTUS AI, Heidi Health, and Nuance DAX Copilot highlight the utility of automated clinical documentation within healthcare, they rely on networked deployment, extensive integration, and external data processing \cite{tortus_product_2026,heidi_product_2026,dictationdirect_dax_features_2026}. In the context of the NHS, these dependencies introduce significant data governance and infrastructural challenges. Consequently, developing an offline proof-of-concept provides a mechanism to evaluate an alternative deployment architecture designed to address these specific operational constraints.
 
@@ -29,7 +28,7 @@ From those aims, I defined the following concrete project goals:
 
 \begin{itemize}
     \item Compare candidate pre-trained medical large language models (LLMs) under different quantisation levels and select a summarisation model that is feasible on the target hardware.
-    \item Implement a real-time transcription pipeline using Whisper together with a diarisation model based on a pre-recorded voice embedding.
+    \item Build an Ambient Voice Technology (AVT) pipeline to record and transcribe conversations
     \item Build a retrieval pipeline that allows clinicians to upload medical guidance PDFs and locate relevant sections from the generated consultation summary.
     \item Provide a Windows-native interface for recording, reviewing outputs, selecting and saving external files, and browsing retrieved guidance.
     \item Structure the application so that future work, such as appraisal support or EPR integration, can be added without major rewrites.

@@ -2,6 +2,7 @@
 \subsection{Design}
 The Appraisal Entry System facilitates the documentation, categorisation, and retrieval of generated clinical summaries. Following a consultation, the doctor must be able to review the generated summary, append clinical notes, assign metadata (such as categorical tags), and save the record for future reference. 
 
+\subsubsection{Storage}
 \begin{itemize}
     \item \textbf{External Export}: A human-readable text file is generated and saved to a user-defined directory via the Windows File Explorer, maintaining the NHS standard \texttt{YYYY-MM-DD\_Appraisal\_} naming convention. This is for use outside of the program
     \item \textbf{Internal State}: A structured JSON file is maintained within the application's isolated local storage environment. This acts as a lightweight database, enabling the application to load, filter, and modify historical appraisals across sessions without requiring a heavy embedded SQL database.
@@ -24,10 +25,13 @@ The internal state is represented in the following Json format
 \label{tab:json_schema}
 \end{table}
 
-The JSON approach was chosen due to the lightweight and fast searching over small datasets. As Dr Atia Rafiq stated that no more than 25 appraisal notes would be required per calendar year, a relational database wouldn't be required to capture the benefits of faster search times.
+The JSON approach was chosen due to the lightweight and fast searching over small datasets. As Dr. Atia Rafiq stated that no more than 25 appraisal notes would be required per calendar year, a relational database wouldn't be required to capture the benefits of faster search times.
+
+\subsubsection{User Interface}
+After a consultation with Dr. Atia Rafiq, the elements of the user interface were decided. It was decided that the dialogue for creating and editing an appraisal would contain the name, summarisation, notes and tags fields. Additional requests for filtering via a tag system and sorting in chronological order were also added to the user interface.
 
 \subsection{Implementation}
-The appraisal system is integrated into the \texttt{MainWindow} class structure and handled within the \texttt{MainWindow.Appraisal.cpp} and \texttt{MainWindow.DisplayAppraisals.cpp} translation units. It uses the \texttt{winrt::Windows::Data::Json} and \texttt{winrt::Windows::Storage} namespaces for data persistence, and dynamically constructs WinUI3 elements at runtime due to the static nature of a WinUI3 XAML front-end
+The appraisal system is integrated into the \texttt{MainWindow} class structure and handled within the \texttt{MainWindow.Appraisal.cpp} and \texttt{MainWindow.DisplayAppraisals.cpp} translation units. It uses the \texttt{winrt::Windows::Data::Json} and \texttt{winrt::Windows::Storage} namespaces for data persistence, and dynamically constructs WinUI3 elements at runtime due to the static nature of a WinUI3 XAML front-end.
 
 \subsubsection{Data Serialisation and Storage}
 When a user saves an appraisal, \texttt{SaveAppraisalToJsonAsync()} manages the serialisation. The application retrieves \texttt{appraisals.json} from the MSIX \texttt{LocalFolder}. If the file is corrupted or missing, a new \texttt{JsonObject} is instantiated. This JSON object will have the following structure:
@@ -58,8 +62,22 @@ When a user saves an appraisal, \texttt{SaveAppraisalToJsonAsync()} manages the 
 \subsubsection{In Memory Caching and Filtering}
 Appraisals are loaded into a \texttt{std::vector<AppraisalItem> m\_allAppraisals} vector upon navigating to the history view via \texttt{LoadAppraisalsAsync()}.  Filtering is applied in-memory. The \texttt{RenderAppraisalsList()} method iterates over the cached vector, applying a substring match for the appraisal name and checking against a \texttt{std::set<std::wstring> m\_activeFilters} for tag matches. The resulting subset is sorted chronologically using \texttt{std::sort} prior to rendering.
 
-\subsubsection{Dynamic User Interface Generation}
-For each filtered \texttt{AppraisalItem}, the application iteratively constructs a \texttt{Button} containing a \texttt{Border} and a \texttt{StackPanel} where pressing the button opens the full appraisal for CRUD operations. This approach allows for control over the filtering and ordering of appraisals. Additionally, embedding the appraisal's unique identifier into the \texttt{Tag} property of the button allows click events to be handled by the generated button.
+\subsubsection{User Interface}
+For each filtered \texttt{AppraisalItem}, the application iteratively constructs a \texttt{Button} containing a \texttt{Border} and a \texttt{StackPanel} where pressing the button opens the full appraisal for CRUD operations. This approach allows for control over the filtering and ordering of appraisals. Additionally, embedding the appraisal's unique identifier into the \texttt{Tag} property of the button allows click events to be handled by the generated button. The final user interface is as shown.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{appraisals1.png}
+    \caption{Creating an appraisal}
+    \label{fig:appraisal_creation}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{apraisals2.png}
+    \caption{Viewing the appraisal archive. Clicking on an appraisal brings the same dialogue as shown in figure \ref{fig:appraisal_creation}}
+    \label{fig:appraisal_viewing}
+\end{figure}
 
 \subsubsection{State Synchronisation during Modification}
 When an appraisal is edited or deleted, the system must synchronise the in-memory cache, the JSON storage, and the UI. For instance, within \texttt{HistoryDialog\_DeleteClick()}, the target entry is first removed from the \texttt{m\_allAppraisals}. Next, the JSON file is read, the target key is removed and the file is overwritten. Finally, \texttt{RenderAppraisalsList()} is invoked to rebuild the user interface from the updated cache, ensuring the deleted item is immediately removed from the view.
@@ -86,4 +104,3 @@ if (JsonObject::TryParse(jsonString, rootObject)) {
 }
 \end{verbatim}
 
-(TODO add UI)

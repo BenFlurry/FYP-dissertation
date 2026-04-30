@@ -13,11 +13,11 @@ A single window approach worked well initially, however, as requirements grew an
 \subsubsection{Implementation}
 In practice, \texttt{enum class AppState{};} in the \texttt{MainWindow} class holds each state value with a setter function \texttt{void SetAppState(AppState state);} to change state. This function handles all states of all UI components, modifying the visibility and activity depending on which state the application is in. This approach gives a single UI application the flexibility to display the correct components depending on the stage of the application
 
-\subsection{UI Design/Implementation}
-The user interface took several iterations, with feedback from all stakeholders resulting in a pastel background with bold button colours to guide the user through the standard workflow of the application.
+\subsection{User Interface}
+\subsubsection{Design}
+The user interface took several iterations. Feedback from clients informed button placement and colour, while providing me with freedom to design the background. The background colours represent this project's participants. The blue in the bottom left represents the NHS's logo fading into a purple representing UCL before finishing with a yellow, for brightness. This also provides an appealing, non-invasive user interface aesthetic while matching the typical colours found in AI powered applications. All buttons are rounded to match the Windows 11 style.
 
-The background colours represent this project's participants. The blue in the bottom left represents the NHS's logo fading into a purple representing UCL before finishing with a yellow, for brightness. This also provides an appealing, non-invasive user interface aesthetic while matching the typical colours found in AI powered applications. All buttons are rounded to match the Windows 11 style.
-
+\subsubsection{Implementation}
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.48\linewidth]{ui1.png}\hfill
@@ -31,9 +31,7 @@ The background colours represent this project's participants. The blue in the bo
     \label{fig:UI_grid}
 \end{figure}
 
-Loading, IncompatibleDevice and GeneratingSummarisation states all have the same UI as WaitingRecording with no "Start Recording" button. 
-
-The persistent settings, information and help bar at the top of the application persists over all views and states for ease of access. These flyout menus expand to the following:
+Loading, IncompatibleDevice and GeneratingSummarisation states all have the same UI as WaitingRecording with no "Start Recording" button. The persistent settings, information and help bar at the top of the application persists over all views and states for ease of access. These flyout menus expand to the following:
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.32\linewidth]{ui5.png}\hfill
@@ -44,7 +42,7 @@ The persistent settings, information and help bar at the top of the application 
     \label{fig:UI_grid_flyouts}
 \end{figure}
 
-As shown in the settings flyout, the doctor can re-record their voice embedding, choose their microphone input and change the default save location. Deleting appraisals and managing guidance documents will be covered (TODO reference)
+All click handlers were placed within their relevant \texttt{MainWindow.<Implementation>.xaml.cpp} file with the format \texttt{<buttonName>button\_Click()} naming convention.
 
 \subsection{Windows Filesystem Interactions}
 \subsubsection{Design}

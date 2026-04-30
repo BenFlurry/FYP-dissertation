@@ -1,6 +1,6 @@
 \section{Retrieval of Medical Guidelines}
 \subsection{NICE API}
-After applying for access to use the NICE API to save guideline on device to enable the retrieval of medical guidelines, we discussed our approach with a representative from their security team. He expressed the limitations that would be imposed on the project if the original plan of storing all medical guidance on device was undertaken. The NICE security team only allows access of their content through the API, and must guarantee that NICE information cannot be accessed outside of the UK. As a result, the only acceptable solution would require an API key to be hosted on either a private UCL or NHS network. This would break the core principle of an offline solution and prevent this component from working outside of the network the key is hosted on. After collaborating with my supervisors, we shifted our approach to the following design. 
+Our original approach was to download all NICE guidance PDF documents and bundle them with the application to be used for guidance retrieval. After applying for access to use the NICE API, we discussed our approach with a representative from their security team. He expressed the limitations that would be imposed on the project if the original plan of storing all medical guidance on device was undertaken. The NICE security team only allows access of their content through the API, and must guarantee that NICE information cannot be accessed outside of the UK. As a result, the only acceptable solution would require an API key to be hosted on either a private UCL or NHS network. The API solution was deemed out-of-scope for the proof-of-concept due to its incompatibility with public demonstrations and trials. After collaborating with my supervisors, we shifted our approach to the following design. 
 
 \subsection{Design}
 Instead of a purpose build RAG for NICE guidelines, the application would support the uploading of medical guidance PDF's from the doctor's file system. This guidance would be queried to highlight relevant medical guidelines based on the summarisation.
@@ -20,11 +20,8 @@ Although a naive token window chunking method would provide uniform vectors and 
 
 The HNSW graph persists alongside the SQLite database in a \texttt{nice\_guidelines.bin} file which holds the calculated embeddings tree. Any PDF files uploaded by the user will be copied into the MSIX sandbox, then the SQLite database and embeddings tree will be updated
 
-\subsubsection{ANN Search}
-HNSWLib's hierarchical navigable small worlds index gives sub-linear search time at the cost of a small recall drop relative to exact $k$-NN searches (TODO cite). This trade-off is acceptable for clinical guidance retrieval, where the system is surfacing candidate passages for human review rather than answering definitively. Furthermore, as documents of any size can be added and removed at any time, the latency of embedding and searching is crucial to the application's usability. 
-
 \subsection{Implementation}
-\subsubsection{Incompatability}
+\subsubsection{NPU Incompatability}
 Although the design called for the MedCPT model to be ran on the NPU, there were implementation issues. After extensive debugging, a root cause for the model failing to load and crash the application could not be found. After consulting my external supervisor, using the NPU was de-prioritised due to a CPU implementation resulting in acceptable inference latency (TODO cite).
 
 \subsubsection{Concurrency}
@@ -53,9 +50,9 @@ Because the application runs inside the MSIX sandbox, the SQLite connection sets
     \item Embed the chunk via \texttt{GuidelineRAG::EmbedText()}, which tokenises the text, runs MedCPT, extracts the CLS-token output and L2-normalises it.
     \item Insert the embedding into the HNSW graph at a freshly allocated chunk identifier, then insert the chunk row into SQLite within a single transaction. The chunk identifier is shared between the two stores so that an HNSW hit can be resolved with one lookup.
     \item After commit, count the rows for the new \texttt{guideline\_name}; if the row count does not match the number of chunks added to HNSW, the entire index is rolled back. This caught a real failure mode where a partial write to SQLite (caused by an unrelated MSIX file-system limitation early in development) had left the HNSW graph and SQLite metadata out of sync.
-\end{enumerate} (TODO make diagram)
+\end{enumerate} 
 
-\subsubsection{UI}
+\subsubsection{User Interface}
 Embedding the PDF file within the user interface allows for a native PDF viewing experience. The found guidance on the left jumps the user to the corresponding highlighted bounding box within the PDF viewer, and tabs across the top enable navigation between multiple PDFs
 \begin{figure}[H]
     \centering

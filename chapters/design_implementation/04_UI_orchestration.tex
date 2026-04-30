@@ -1,6 +1,7 @@
-\section{UI Orchestration}
+\section{Orchestration}
+\label{di:orchestration}
 \subsection{Design}
-A WinUI3 \texttt{MainWindow} starts as a single XAML file with a single code-behind translation unit. As the application grew this would have become unmanageable: by the end of the project, \texttt{MainWindow} owned a recorder, a transcription engine, a summarisation engine, a doctor embedding, a guideline indexer, a guideline RAG instance, a JSON appraisals store and the corresponding click handlers for each. Rather than introduce a \texttt{ViewModel}-style abstraction, which would have required a large amount of boilerplate to bridge MVVM patterns into the C++/WinRT framework, the implementation keeps the single \texttt{MainWindow} class but spreads its definition across several translation units:
+A WinUI3 \texttt{MainWindow} starts as a single XAML file with a single code-behind translation unit. Although an MVVM or MVC architecture was considered, a 1-1 mapping of UI view and back-end library can be formed negating the requirement for a controller in this implementation. Use of a controller or view model would have increased the amount boilerplate for very little benefit. Therefore, the \texttt{MainWindow} class spreads its definition across several translation units:
 
 \subsection{Implementation}
 The decoupling of the \texttt{MainWindow} class is as follows
@@ -15,6 +16,4 @@ The decoupling of the \texttt{MainWindow} class is as follows
     \item \texttt{MainWindow.Settings.cpp} owns the persistent-settings flyout menu.
 \end{itemize}
 
-All translation units sit inside \texttt{namespace winrt::ClinicalSummarisation::implementation} contributing methods to a single \texttt{MainWindow} class definition. The header (\texttt{MainWindow.xaml.h}) declares every member method and attribute, where each \texttt{.cpp} file implements an abstracted subset. This approach was taken due to an almost 1-1 mapping of model and view. A controller would have added additional abstraction boilerplate layer to map each model with a corresponding view which is unecessary for an application with very few deviations from a sequential flow.
 
-(TODO move to start of design adn implementation)

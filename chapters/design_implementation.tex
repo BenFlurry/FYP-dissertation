@@ -46,7 +46,7 @@
 % This is a core chapter in your report and will usually be quite substantial, 10
 % pages or more.
 
-For the ease of the reader, the design and implementation chapter will provide an overview of the system architecture before moving to a chronological path of the user flow throughout the application. As per a typical software engineering project, after the requirements mapping and feasibility study was conducted, each component of the application was designed, then implemented in an iterative format. This chapter will follow the path the user takes through the application through the audio-transcription-summarisation pipeline through to appraisals then guidance retrieval.
+For the ease of the reader, the design and implementation chapter will provide an overview of the system architecture before moving to a chronological path of the user flow throughout the application. As per a typical software engineering project, the feasibility study was conducted, each component of the application was designed from, then implemented in an iterative format. The full requirements traceability matrix is found in Appendix \ref{app:requirements_traceability}. This chapter will follow the path the user takes through the application through the audio-transcription-summarisation pipeline through to appraisals then guidance retrieval.
 
 \section{Application Design Overview}
 \subsection{Concurrency}
@@ -69,7 +69,7 @@ This threading model also maps naturally onto the heterogeneous compute resource
 \subsection{Class Overview}
 Figure~\ref{fig:uml_brief} illustrates the high-level object-oriented architecture of the application, demonstrating how the concurrent threads detailed in the previous section map to specific C++ classes. The architecture follows a modular approach, orchestrated by the \texttt{MainWindow} class executing on the UI thread. 
 
-The architecture is divided into the 4 main components along with their corresponding colour in diagram \ref{fig:uml_brief} 
+The architecture is divided into the 4 main components along with their corresponding colour in the UML diagram \ref{fig:uml_brief} 
 \begin{itemize}
     \item \textbf{Audio-Transcription Pipeline (Pink, Yellow and Orange):} This pipeline handles all recording, transcription and diarisation. The interactions within the pipeline are as follows:
     \begin{itemize}
@@ -79,11 +79,8 @@ The architecture is divided into the 4 main components along with their correspo
     \end{itemize}
     \item \textbf{SummarisationEngine (Green)}: A class to handle all summarisation, receiving a transcript from the audio-transcription pipeline and generating a summary, and signalling to the \texttt{MainWindow} once complete. This class also sends a signal to the \texttt{MainWindow} indicating once the model has loaded in case the conversation finishes first.
     \item \textbf{RAG (Pale):} Document chunking, vector indexing, and SQLite database interactions are isolated within the \texttt{GuidelineIndexer} and \texttt{GuidelineRAG} classes, returning the \texttt{GuidelineResult} to the \texttt{MainWindow} to be displayed.
-    \item \textbf{UI and Orchestration (Blue)}: Controls the instantiation of all pipelines and orchestrates the start of the audio-transcription-summarisation and retrieval pipelines. The \texttt{MainWindow} class is broken into a sub-class per UI component, which acts as a controller for their corresponding models.
+    \item \textbf{UI and Orchestration (Blue)}: Controls the instantiation of all pipelines and orchestrates the start of the audio-transcription-summarisation and retrieval pipelines. The \texttt{MainWindow} class is segmented into a translation per functionality
 \end{itemize}
-
-\subsection{Orchestration}
-Although the UI class controls the threading and flow of this application, the sub-class architecture ensures this class is not overloaded with different purposes. This is handled through the naming convention: \texttt{MainWindow.<ComponentName>.xaml.cpp} combined with the \texttt{namespace winrt::ClinicalSummarisation::implementation} declaration, which results in 1 \texttt{MainWindow} class with multiple implementation files for ease of development. The orchestrator architecture and design decision will be expanded upon in the future. (TODO link)
 
 \begin{figure}[H]
     \centering
@@ -92,13 +89,48 @@ Although the UI class controls the threading and flow of this application, the s
     \label{fig:uml_brief}
 \end{figure}
 
+\subsection{Orchestration}
+Although the UI class controls the threading and flow of this application, the sub-class architecture ensures this class is not overloaded with different purposes. This is handled through the naming convention: \texttt{MainWindow.<ComponentName>.xaml.cpp} combined with the \texttt{namespace winrt::ClinicalSummarisation::implementation} declaration, which results in 1 \texttt{MainWindow} class with multiple implementation files for ease of development. The full design and implementation can be found in section \ref{di:orchestration}
+
 \section{Environment}
 The selection of Visual Studio as the primary development environment was motivated by two factors. First, the integrated MSIX packaging project template facilitated streamlined deployment, including sideloading and publishing. Secondly, the IDE provided a graphical interface for configuring compiler and linker paths for multiple third-party libraries within the MSIX sandbox.
 
 \subsection{Packaging, Publishing and Deployment}
-The solution architecture utilises the MSIX packaged project template, dividing the workspace into a primary source code project, \texttt{ClinicalSummarisation}, and a dedicated packaging project, \texttt{ClinicalSummarisation (Package)}. This structural separation isolates the compilation of the application logic from the generation of the MSIX sandbox and linking of external libraries
+The solution architecture utilises the MSIX packaged project template, dividing the workspace into a primary source code project, \texttt{ClinicalSummarisation}, and a dedicated packaging project, \texttt{ClinicalSummarisation (Package)}. This structural separation isolates the compilation of the application logic from the generation of the MSIX sandbox and linking of external libraries. This approach provides flexibility regarding deployment type. By "deploying" the application, the platform cleans, builds and side-loads the application onto the device to be ran through the Windows start menu. By "Publishing" an \texttt{MSIXBUNDLE} file is created. Certification is handled through a self-signing certificate for side loading, or a publisher's certificate for release
 
-This approach provides flexibility regarding deployment type. By "deploying" the application, the platform cleans, builds and side-loads the application onto the device to be ran through the Windows start menu. By "Publishing" and self signing the app, a \texttt{MSIXBUNDLE} file is created with a certificate to be side-loaded onto other devices. By "Publishing" and leaving the app unsigned, a publisher can sign the \texttt{MSIXBUNDLE} to be released publicly. 
+\subsection{Libraries}
+\label{app:libraries}
+\subsubsection{OpenVINO - Model Installation and Inference}
+Because a core objective of this project is to harness the hardware capabilities of an Intel AIPC for local model inference, Intel's OpenVINO toolkit was a non-negotiable choice. This toolkit converts ML models into an Intermediate Representation (IR) specialised for Intel hardware, significantly decreasing inference latency. Since the library is only compatible with C/C++, this ruled out a C\#/.NET MSIX approach leaving a WinRT/C++ MSIX packaged application as the only viable platform choice.
+
+Using the optimum-cli tool, models can be downloaded from HuggingFace, the industry standard repository for open-source machine learning, and quantised to specific weight sizes to greatly decrease memory usage and inference time. 
+
+\subsubsection{MiniAudio - Audio Recording}
+To handle audio streaming and microphone input selection within the C++ backend, the miniaudio library was chosen. As an open-source, industry-standard tool, it reliably handles playback, capture, encoding, decoding, and data conversion. Its architecture as a single-header, dependency free C library allows for seamless integration. Implementation requires only a single macro definition to be instantiated within the project's scope, minimizing configuration overhead.
+
+\subsubsection{MuPDF - PDF Chunking and Viewing}
+MuPDF is a lightweight and highly versatile library selected to embed a functional PDF viewer directly within the WINUI3/WinRT front-end. This is used to display relevant medical guidance documents, render bounding boxes around contextually important medical guidance sections, and support programmatic navigation between specific pages. Crucially, it achieves this while maintaining standard PDF viewer functionalities such as searching, saving, and scaling.
+
+\subsubsection{SQLite3 - Embeddings Storage}
+SQLite3 was implemented to store document chunk IDs, corresponding text, bounding box coordinates, PDF metadata, and the vector embeddings of user-uploaded medical guidance. By storing these embeddings alongside the raw text, SQLite3 effectively maps the semantic guidance retrieved during the vector search directly back to its source location within the raw PDF. 
+
+Because this application operates entirely offline, traditional client-server relational databases such as PostgreSQL were unnecessary. Such databases would introduce unecessary network configuration and resource overhead. A serverless, self-contained SQL database keeps the entire retrieval pipeline strictly localised, ensuring zero-configuration access to indexed medical guidance.
+
+\subsubsection{HNSWLib - Retrieval Search}
+To power the RAG pipeline, an Approximate Nearest Neighbor (ANN) approach was required. While exact match retrieval algorithms such as kNN offer high precision, their linear scaling results in linearly slow inference times for large document sets. HNSWLib was selected as it prioritises retrieval speed without significantly sacrificing the semantic accuracy which is vital for medical contexts. It was chosen over heavier, managed vector databases to ensure the application's local footprint remained lightweight and responsive.
+
+\subsection{Models}
+\subsubsection{Med42-8B - Summarisation}
+For the core summarization task, the Llama3 based LLM Med42-8B model pre-trained on biomedical textbooks and PubMed publications was selected. This model was chosen following a comparative analysis of the leading sub-10b parameter medical LLMs \ref{sec:med42test}. Utilising a domain-specific pre-trained LLM increases the accuracy of responses within this domain\cite{nissen2025medicine}. While the 70B model used in predecessor to this project was considered, hardware limitations of the target Intel AIPCs (32GB system RAM and 18GB VRAM) prevented loading and quantising such a large model locally. The 8B variant serves as the optimal intersection of hardware compatibility and summarisation accuracy.
+
+\subsubsection{Whisper-Medium - Transcription}
+Speech-to-text transcription is handled by Whisper-Medium. This open-source model was trained on a highly diverse, multi-lingual dataset, cleanly enabling future multi-lingual support. Furthermore, OpenVINO only natively supports Whisper architectures within its \texttt{WhisperPipeline} class, this was the only viable model family. Testing across the Whisper family revealed that the "Large" variant introduced too much latency and performance overheads when running on the CPU, whereas the "Medium" model provided the ideal balance of inference speed and transcription accuracy compared to the "Base", "Normal" and "Tiny" models. Its efficiency allows the application to transcribe conversations in real time, eliminating the need to buffer and store audio files for post-processing.
+
+\subsubsection{Speechbrain ECAPA-TDNN - Diarisation}
+To generate labelled transcripts, a model is required to handle speaker diarisation, the process of identifying which participant is speaking at any given time. This is achieved by passing sentences of the raw audio and transcript into the ECAPA-TDNN model, which calculates the voice embeddings for each sentence. The system mathematically compares the embeddings of an unknown speaker against a pre-recorded embedding of the doctor's voice to determine whether the doctor or patient is speaking for a given sentence. This allows the application to definitively label each transcribed sentence as \texttt{[Doctor]} or \texttt{[Patient]}. Because the model is exceptionally lightweight, it runs efficiently on the CPU concurrently with the Whisper model and the rest of the application during conversation, significantly reducing post-processing delays before summarisation begins.
+
+\subsubsection{MedCPT - Guidance Embeddings}
+MedCPT is a domain-specific semantic information retrieval model pre-trained exclusively on biomedical data. In this pipeline, it is utilised to convert both the generated conversation summaries and the raw PDF guidelines into dense vector representations. These vectors are then mathematically searched with HNSWLib to retrieve the closest contextual match between the consultation summary and the uploaded medical guidance. By harnessing dense semantic matching rather than simple lexical matching, the system ensures that the clinical meaning behind a patient's symptoms or a doctor's recommendation is linked to the correct guidance.
 
 
 \subsection{Library Linking}
