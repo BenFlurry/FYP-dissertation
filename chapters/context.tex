@@ -88,14 +88,30 @@ Given the strict requirements of this project, the selection of development tool
 \subsection{Platform Selection}
 The initial phase of development involved evaluating available platforms. Since the final product requires a native Windows application publishable to the Microsoft Store, three architectural approaches were considered:
 
+\section{Platforms, Models, Frameworks and Libraries}
+Given the strict requirements of this project, the selection of development tools, frameworks, and libraries demanded careful evaluation. This planning phase was critical to avoid structural incompatibilities when bridging the application's many components. 
+
+\subsection{Platform Selection}
+The initial phase of development involved evaluating available platforms. Since the final product requires a native Windows application publishable to the Microsoft Store, three architectural approaches were considered:
+
 \subsubsection{Option 1: A Fully Native Windows Packaged Application}
 \begin{itemize}
     \item \textbf{Development Environment:} Visual Studio
     \item \textbf{Packaging:} MSIX packaged application
     \item \textbf{Front-End:} WinUI3 (XAML)
     \item \textbf{Back-End:} C++ with C++/WinRT / C\# with .NET
+    \item \textbf{Advantages:}
+    \begin{itemize}
+        \item Native application hosted in a single environment
+        \item Simple building, packaging, deployment and debugging
+        \item Programming language execution speed
+        \item Native threading
+    \end{itemize}
+    \item \textbf{Disadvantages:}
+    \begin{itemize}
+        \item Steep learning curve of a new language, platform and development environment
+    \end{itemize}
 \end{itemize}
-A primary advantage of a fully native approach is the streamlined deployment and testing pipeline. Unifying the front-end and back-end within a single native environment enabled easy building, packaging, deployment and debugging. Furthermore, maintaining all files within the same ecosystem facilitates rapid, iterations across the whole application stack. The main drawback of this approach is the steep learning curve. As a Python developer, transitioning to the C family of languages and developing on a new platform with a new development environment will result in slower development and debugging.
 
 \subsubsection{Option 2: A Native Windows Front-End with a Compiled Back-End}
 \begin{itemize}
@@ -103,8 +119,18 @@ A primary advantage of a fully native approach is the streamlined deployment and
     \item \textbf{Packaging:} Nuitka or PyInstaller integrated into an MSIX packaged application
     \item \textbf{Front-End:} WinUI3 (XAML)
     \item \textbf{Back-End:} Python
+    \item \textbf{Advantages:}
+    \begin{itemize}
+        \item Familiar back-end development environment
+        \item Native front-end
+    \end{itemize}
+    \item \textbf{Disadvantages:}
+    \begin{itemize}
+        \item Architectural complexity of packaging python as a back-end
+        \item Complexity of managing threads between the front and back-end
+        \item Difficult to complete end-to-end testing
+    \end{itemize}
 \end{itemize}
-This hybrid approach harnessed my existing proficiency in Python to handle the majority of the application development. By using my familiar VS Code environment and programming language would be optimal for my personal skill set allowing for rapid back-end prototyping and development. However, the architectural complexity of packaging a Python application into a standalone executable or library introduced severe limitations. Since the application requires managing open audio buffers and handling asynchronous data transfer between the front-end and back-end, this bridging process risked becoming cumbersome to implement and difficult to test.
 
 \subsubsection{Option 3: A Non-Native Application Packaged for Windows}
 \begin{itemize}
@@ -112,11 +138,19 @@ This hybrid approach harnessed my existing proficiency in Python to handle the m
     \item \textbf{Packaging:} Nuitka/PyInstaller wrapped in an MSIX package to enable Microsoft Store publishing.
     \item \textbf{Front-End:} PyQt6
     \item \textbf{Back-End:} Python
+    \item \textbf{Advantages:}
+    \begin{itemize}
+        \item Familiar development environment and language
+    \end{itemize}
+    \item \textbf{Disadvantages:}
+    \begin{itemize}
+        \item Not Windows native
+        \item Python GIL prevents real threading
+    \end{itemize}
 \end{itemize}
-A completely Python-based stack offered the most familiar development environment, but it presented substantial performance and system integration drawbacks. The front-end must handle native Windows file navigation and require seamless access to microphone permissions including features that are natively supported in a native approach but often require complex workarounds in PyQt6. Critically, the application must simultaneously manage user input, load summarisation models into the GPU, and execute a live audio transcription pipeline. Due to Python's Global Interpreter Lock, multi-threading is computationally expensive and highly restrictive, which would likely result in an unresponsive UI and unacceptable latency during live audio processing and LLM inferences.
 
 \subsubsection{Conclusion}
-To fulfil the core requirement of delivering a high-performance, Windows-native application, Option 1 was selected. Despite the steep learning curve, adopting a completely native environment (C++/C\#, WinUI3) yielded the necessary efficiency and ease of deployment. Foundational programming experience in Java and C facilitated this transition, ultimately making the development process highly effective. The performance bottlenecks of Python's GIL and the fragility of handling asynchronous audio streams across packaged Python executables were deemed too restrictive for this application's real-time requirements.
+To fulfil the core requirement of delivering a high-performance, Windows-native application, Option 1 was selected. Despite the steep learning curve, adopting a completely native environment (C++/C\#, WinUI3) yielded the necessary efficiency and ease of deployment. The performance bottlenecks of Python's GIL and the fragility of handling asynchronous audio streams across packaged Python executables were deemed too restrictive for this application's real-time requirements.
 
 \subsection{Libraries}
 To gain better understanding of the different libraries in the program, here is a brief chronological flow that the program will run. All models are downloaded and run using the OpenVINO library
