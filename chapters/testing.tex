@@ -79,7 +79,7 @@ Throughout all UI testing, the user interface remained responsive with no notice
 
 \subsection{Accuracy Testing}
 \subsubsection{Summarisation}
-After selecting Med42 as our summarisation model, the LLM testing framework in section \ref{di:test_med42} was re-ran with the \texttt{rescale\_with\_baseline\=False} to provide an individual benchmark over a comparative benchmark. The results provided in \ref{fig:med42_benchmark} demonstrate this is a strong candidate precision score of 88\%.
+After selecting Med42-v2 as the summarisation model, the LLM testing framework in section \ref{di:test_med42} was re-ran with the \texttt{rescale\_with\_baseline\=False} to provide an individual benchmark over a comparative benchmark. The results provided in \ref{fig:med42_benchmark} demonstrate this is a strong candidate precision score of 88\%.
 
 \begin{figure}[H]
     \centering
@@ -111,8 +111,8 @@ After selecting Med42 as our summarisation model, the LLM testing framework in s
     \caption{Evaluation metrics for the Med42-int4 model.}
 \end{figure}
 
-\subsubsection{Transcription}
-The accuracy of the transcription in this clinical setting was tested on medical terminology. A glossary of medical terminology published by the European Medicines Agency \cite{ema_medical_terms_simplifier} was used as the ground truth set. This was conducted by running the application and speaking 4 randomly selected words for each starting letter of the alphabet. Once completed, the transcription was viewed and compared against the glossary. To analyse these results, each word was placed into a category of correct, minor inaccuracy (punctuation or American English) and major inaccuracy.
+\subsubsection
+General performance of the Whisper-Medium model has been validated by numerous studies finding a word error rate of 5.86\% to 9.4\% for English speakers in a quiet controlled environment \cite{pulikodan2025approach,chang2026llm}. Therefore the accuracy of the transcription in this clinical setting was tested on medical terminology. A glossary of medical terminology published by the European Medicines Agency \cite{ema_medical_terms_simplifier} was used as the ground truth set. This was conducted by running the application and speaking 4 randomly selected words for each starting letter of the alphabet. Once completed, the transcription was viewed and compared against the glossary. To analyse these results, each word was placed into a category of correct, minor inaccuracy (punctuation or American English) and major inaccuracy.
 
 \begin{table}[htbp]
 \centering
@@ -127,20 +127,19 @@ The accuracy of the transcription in this clinical setting was tested on medical
 \label{tab:results}
 \end{table}
 
-Generally, the transcription model has a large enough vocabulary to accurately transcribe medical terminology. Common inaccuracies involve incorrect hyphens, American English spelling, and incorrect capitalisation. The incorrectly transcribed words included syncope, fissure and tophi miss-transcribed to sync up, Fisher and trophy. This is likely due to the transcribed words having higher weights within the model due to their popularity compared to the niche medical terminology. Overall an 93\% accuracy on medical terminology is acceptable, especially since the summarisation can infer context. The full results can be examined in Appendix \ref{app:testing_transcription_results}.
-
+Generally, the transcription model has a large enough vocabulary to accurately transcribe medical terminology with a 7\% word error rate. Common inaccuracies involve incorrect hyphens, American English spelling, and incorrect capitalisation. The incorrectly transcribed words included syncope, fissure and tophi miss-transcribed to sync up, Fisher and trophy. This is likely due to the transcribed words having higher weights within the model due to their popularity compared to the niche medical terminology. The full results can be examined in Appendix \ref{app:testing_transcription_results}.
 
 
 \subsubsection{Guidelines Retrieval}
-Due to the custom retrieval pipeline implementation, testing with a ground truth PDF dataset is unfeasible. Without a found ground truth set, no quantitative testing or results can be generated. That being said, qualitative testing was completed. Generally speaking, the retrieved guidance was accurate, however was highly dependent on the specificity of the guidance PDFs uploaded. General documents laying out a disease progression or advice for trivial diseases provided little valuable insights. Very specific guidance documents were highly effective at retrieving medical guidance that is important to the conversation.
+Due to the custom retrieval pipeline implementation, testing with a ground truth PDF dataset is unfeasible. Without a found ground truth set, no quantitative testing or results can be generated. Qualitative testing showed the retrieved guidance to be correct, however the usability was highly dependent on the specificity of the guidance PDFs uploaded. General documents laying out a disease progression or advice for trivial diseases provided little valuable insight. 
 
 \section{UI Testing}
 User interface testing began by testing every state transition in the application to ensure that the state management system was functional. Next, persistent data such as the doctor's voice embedding, appraisals and uploaded guidance was loaded, then checked for their presence after an application restart. All tests passed, while the UI stayed responsive and in the state we were expecting. A full list of test cases is in the appendix \ref{app:UI_test}
 
 \section{User Acceptance Testing}
-Throughout the project, 5 demonstrations and 2 trials of the application were conducted with Dr Atia Rafiq and Dr Tazeen Ahmed. At a UCL hosted AI conference, I trialled the application by mocking a consultation with Dr Tazeen Ahmed where she used the application as if she was conducting a real consultation. The application took no explanation on how to use and the consultation was successfully carried out resulting in a successful user acceptance test(TODO requirement). She expressed her enthusiasm with the project and commented that this application would "save her lots of time taking notes and reviewing consultations throughout the day". She further commented that the appraisals system would be "highly beneficial" for training GPs. She also provided feedback regarding the prompt, requesting the prompt to use the "the patient says" and "the doctor suggested" formats which were integrated after the event.
+Throughout the project, 5 demonstrations and 2 trials of the application were conducted with Dr Atia Rafiq and Dr Tazeen Ahmed, providing a formative evaluation of the application. At a UCL hosted student showcase, I trialled the application (without the guidelines retrieval) by mocking a consultation with Dr. Tazeen Ahmed where she used the application as if she was conducting a real consultation. She was able to use the application with little guidance and the consultation was successfully carried out resulting in a successful user acceptance test(TODO requirement). She expressed her enthusiasm with the project and commented that this application could save her lots of time taking notes and reviewing consultations throughout the day. She further commented that the appraisals system could be highly beneficial for training GPs. She also provided feedback regarding the prompt, noting the informal tone, suggesting a "the patient says" and "the doctor suggested" format which was integrated after the event. Unfortunately due to a cyber attack on the St. Georges Hospital, a full mock consultation and planned formal user acceptance testing could not be completed.
 
-On a video call with Dr Atia Rafiq, I demonstrated the application. She noted that the user interface looked easy to use and had an appeasing design and that the application would be very useful to her and her trainee GPs. She added a further recommendation to create the appraisals component to allow note taking and commentary on conversations to demonstrate learning that was conducted post-consultation.
+On a video call with Dr Atia Rafiq, I demonstrated the application (without the guidelines retrieval and appraisals). She noted that the user interface looked easy to use and had an appealing design and that the application could be very useful to her and her trainee GPs. She added a further recommendation to create the appraisals component to allow note taking and commentary on conversations to demonstrate learning that was conducted post-consultation.
 
 
 
