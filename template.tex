@@ -9,6 +9,7 @@
 \usepackage{amsmath}
 \usepackage[a4paper, margin = 3cm, bottom = 2.5cm]{geometry}
 \usepackage{tabularx}
+\usepackage{xltabular}
 \usepackage{booktabs}
 \usepackage{float}
 \usepackage{longtable}
@@ -17,8 +18,11 @@
 \usepackage{listings}
 \usepackage{pgfplots}
 \usepackage{multicol}
+\usepackage[backend=biber, style=numeric-comp, sorting=none, url=true]{biblatex}
+\addbibresource{main.bib}
 
 \usetikzlibrary{arrows.meta, bending}
+
 
 \lstset{basicstyle=\ttfamily\small}
 \newtheorem{theorem}{THEOREM}
@@ -92,18 +96,20 @@ Prof. Dean Mohamedally (UCL), Costas Stylianou (Intel)}
 
 \appendix
 
-\bibliographystyle{unsrt}
-\bibliography{main}
+\printbibliography
+% \bibliographystyle{unsrt}
+% \bibliography{main}
 
 \include{chapters/appendix/requirements}
 \include{chapters/appendix/requirements_tracability}
 \include{chapters/appendix/test_diarisation}
 \include{chapters/appendix/prompt}
 \include{chapters/appendix/test_execution_matrix}
-\include{chapters/appendix/test_unittest}
-\include{chapters/appendix/test_ui}
+\include{chapters/appendix/unittests.tex}
+\include{chapters/appendix/ui_test}
 \include{chapters/appendix/test_transcription}
 \include{chapters/appendix/user_manual}
+\include{chapters/appendix/system_manual}
 \chapter{Other appendices, e.g., code listing}
 Put your appendix sections here
 \end{document}

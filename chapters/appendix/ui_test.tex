@@ -1,4 +1,79 @@
 \chapter{User Interface Testing}
-\ref{app:ui_test}
+\label{app:ui_test}
 
-TODO
+
+\begin{xltabular}{\textwidth}{|
+  >{\raggedright\arraybackslash\hsize=0.85\hsize}X |
+  >{\raggedright\arraybackslash\hsize=0.85\hsize}X |
+  >{\raggedright\arraybackslash\hsize=0.8\hsize}X | 
+  >{\raggedright\arraybackslash\hsize=1.5\hsize}X |  
+  p{1cm} |} 
+\caption{UI Testing Results} \label{tab:ui_testing} \\
+\hline
+\textbf{View} & \textbf{Context} & \textbf{Action} & \textbf{Expectation} & \textbf{Result} \\
+\hline
+\endfirsthead
+
+% Header for subsequent pages
+\hline
+\textbf{View} & \textbf{Context} & \textbf{Action} & \textbf{Expectation} & \textbf{Result} \\
+\hline
+\endhead
+
+% Footer for pages before the last page
+\hline
+\multicolumn{5}{r}{\textit{Continued on next page}} \\
+\endfoot
+
+% Footer for the very last page
+\hline
+\endlastfoot
+
+% --- Data Rows (with \hline separating every test case) ---
+program launch & application has never been launched & - & enroll doctors voice view shows & Pass \\ \hline
+program launch & - & - & loading application view shows & Pass \\ \hline
+loading application & - & press appraisal entries & button is not clickable & Pass \\ \hline
+ready to record & - & press appraisals icon & appraisal history appears loaded with previous appraisals & Pass \\ \hline
+recording & - & press finish recording & generating summarisation view shows & Pass \\ \hline
+recording & - & press cancel recording & ready to record view shows & Pass \\ \hline
+recording & - & press appraisal entries & button is not clickable & Pass \\ \hline
+generating summarisation & - & press appraisal entries & button is not clickable & Pass \\ \hline
+generating summarisation & - & none & summarisation view shows with loaded summary & Pass \\ \hline
+summarisation & - & press appraisal entries & appraisal history appears loaded with previous appraisals & Pass \\ \hline
+summarisation & - & press copy summarisation & the summarisation is copied to clipboard & Pass \\ \hline
+summarisation & a save location directory is provided & press save summarisation & file explorer opens at the save location with the prefix YYYY-MM-DD\_Summary & Pass \\ \hline
+summarisation & a save location directory is provided & press save transcription & file explorer opens at the save location with the prefix YYYY-MM-DD\_Transcription & Pass \\ \hline
+summarisation & a save location directory isn't provided & press save summarisation & file explorer opens at the desktop with the prefix YYYY-MM-DD\_Summary & Pass \\ \hline
+summarisation & a save location directory isn't provided & press save transcription & file explorer opens at the desktop with the prefix YYYY-MM-DD\_Transcription & Pass \\ \hline
+summarisation & - & press view guidance & guidance view shows & Pass \\ \hline
+summarisation & - & press new recording & ready to record view shows & Pass \\ \hline
+summarisation & - & press create appraisal entry & the appraisal entry dialogue opens & Pass \\ \hline
+summarisation & appraisal entry dialog is open & press save & file explorer opens at the save location with the prefix YYYY-MM-DD\_Transcription & Pass \\ \hline
+summarisation & appraisal entry dialog is open & press cancel & dialog closes, summarisation view shows & Pass \\ \hline
+appraisal history & from ready to record view & press back to recording & ready to record view shows & Pass \\ \hline
+appraisal history & from summarisation view & press back to recording & summarisation view shows with loaded summary & Pass \\ \hline
+appraisal history & - & search for a tag & appraisal entries with the tag show in chronological order & Pass \\ \hline
+appraisal history & - & search for a name & matching appraisal names show & Pass \\ \hline
+appraisal history & - & press on an appraisal entry & appraisal entry opens with corresponding data & Pass \\ \hline
+appraisal history & appraisal entry dialog is open & press update & the appraisal entry updates and closes the dialog & Pass \\ \hline
+appraisal history & appraisal entry dialog is open & press delete & the appraisal entry is deleted and closes the dialog & Pass \\ \hline
+appraisal history & appraisal entry dialog is open & press exit & the dialog is closed & Pass \\ \hline
+guidance & - & - & the location of the most relevant guideline is open with the area highlighted & Pass \\ \hline
+guidance & - & hover over a guidance snippet & the full PDF file name shows & Pass \\ \hline
+guidance & - & press a guidance snippet & PDF jumps to that location with the area highlighted & Pass \\ \hline
+guidance & - & press a PDF tab & opens the PDF & Pass \\ \hline
+guidance & - & PDF operations (search, save) & behaves as a browser based pdf viewer & Pass \\ \hline
+guidance & - & press back & summarisation view shows with loaded summary & Pass \\ \hline
+settings & - & press microphone input & drop down menu of avaliable microphones shows & Pass \\ \hline
+settings & microphone input pressed & select a microphone & the microphone shows as selected & Pass \\ \hline
+settings & - & press enroll voice detection & enroll doctors voice view shows & Pass \\ \hline
+settings & - & press change location & file explorer opens and a folder can be selected & Pass \\ \hline
+settings & - & press add medical guidance & file explorer opens and PDFs can be selected & Pass \\ \hline
+settings & - & press bin icon & the pdf is removed from the list of guidance documents & Pass \\ \hline
+settings & - & press delete all appraisals & all appraisals are deleted from appraisal history & Pass \\ \hline
+settings & application has never been launched & press cancel & enroll doctors voice view shows & Pass \\ \hline
+settings & - & press start & displays text to read & Pass \\ \hline
+enroll doctors voice & voice enrollment in progress & press finish & ready to record view shows & Pass \\ \hline
+enroll doctors voice & voice enrollment in progress & press cancel & ready to record view shows & Pass \\ \hline
+
+\end{xltabular}

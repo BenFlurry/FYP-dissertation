@@ -67,6 +67,8 @@ NF4 & UI Responsiveness during heavy background processing & No freezing/hangs &
 \label{tab:performance_results}
 \end{table}
 
+Informal testing involved monitoring the task manager to record the GPU and CPU useage and memory consumption. During transcription, the CPU usage maintained 40\% with 22GB of RAM usage. Once the Med42-v2 model was loaded, VRAM usage maintained 6.5GB with 100\% usage at inference time.
+
 
 \subsubsection{Summarisation Inference (NF2)}
 To test the NF2 requirement, a 15 minute mock conversation was conducted with a friend. By recording the time taken for the conversation and inference, we found the result of around 73 seconds for a 15 minute conversation, within the required 90 seconds.
@@ -134,7 +136,7 @@ Generally, the transcription model has a large enough vocabulary to accurately t
 Due to the custom retrieval pipeline implementation, testing with a ground truth PDF dataset is unfeasible. Without a found ground truth set, no quantitative testing or results can be generated. Qualitative testing showed the retrieved guidance to be correct, however the usability was highly dependent on the specificity of the guidance PDFs uploaded. General documents laying out a disease progression or advice for trivial diseases provided little valuable insight. 
 
 \section{UI Testing}
-User interface testing began by testing every state transition in the application to ensure that the state management system was functional. Next, persistent data such as the doctor's voice embedding, appraisals and uploaded guidance was loaded, then checked for their presence after an application restart. All tests passed, while the UI stayed responsive and in the state we were expecting. A full list of test cases is in the appendix \ref{app:UI_test}
+All buttons and data entry fields were tested throughout the application, ensuring state transitions and all behaviour was as expected. A full list of test cases and results is in Appendix \ref{app:UI_test}.
 
 \section{User Acceptance Testing}
 Throughout the project, 5 demonstrations and 2 trials of the application were conducted with Dr Atia Rafiq and Dr Tazeen Ahmed, providing a formative evaluation of the application. At a UCL hosted student showcase, I trialled the application (without the guidelines retrieval) by mocking a consultation with Dr. Tazeen Ahmed where she used the application as if she was conducting a real consultation. She was able to use the application with little guidance and the consultation was successfully carried out resulting in a successful user acceptance test(TODO requirement). She expressed her enthusiasm with the project and commented that this application could save her lots of time taking notes and reviewing consultations throughout the day. She further commented that the appraisals system could be highly beneficial for training GPs. She also provided feedback regarding the prompt, noting the informal tone, suggesting a "the patient says" and "the doctor suggested" format which was integrated after the event. Unfortunately due to a cyber attack on the St. Georges Hospital, a full mock consultation and planned formal user acceptance testing could not be completed.

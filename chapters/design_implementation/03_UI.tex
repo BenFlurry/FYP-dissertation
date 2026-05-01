@@ -1,4 +1,5 @@
 \section{User Interface and Orchestration}
+This section is comprised of the design decision for the pipeline orchestrator design patter, and facilitated the second release of the application
 \subsection{State}
 \subsubsection{Design}
 A single window approach worked well initially, however, as requirements grew and additional features and requirements resulted in more views, state management required a complete design. Every UI element existed in the same \texttt{MainWindow.xaml} file due to the complexity of creating new UI files and transitioning between them. To manage this, I designed a state machine to handle the transitions between the different states of the application. Here is a diagram to demonstrate

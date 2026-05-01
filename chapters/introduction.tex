@@ -8,7 +8,7 @@ This project was developed as part of the UCL IXN in partnership with Intel with
 \section{Problem Overview}
 In a consultation, a doctor needs to listen, ask follow-up questions, reason about symptoms, and still produce a record that is accurate for later clinical use. The usual consultation flow is as follows: type and take notes during the appointment, ask follow-up questions, and reconstruct the encounter afterwards. Each of these stages has their drawbacks. Typing during the consultation interrupts eye contact and changes the rhythm of the conversation and writing notes afterwards is slow and risks losing detail.
 
-The main idea of this project is to shift the administrative work into an on-device pipeline. The application records the conversation, transcribes and diarises (labelling sentences as doctor or patient) in real time, produces a clinical summary after the consultation, and searches uploaded guidance documents for relevant medical guidelines. In practice, the output of the consultation contains a transcript, a summary, and a link back to guidance that may help the clinician check what was discussed. This also provides a 
+The main idea of this project is to shift the administrative work into an on-device pipeline. The application records the conversation, transcribes and diarises (labelling sentences as doctor or patient) in real time, produces a clinical summary after the consultation, and searches uploaded guidance documents for relevant medical guidelines. In practice, the output of the consultation contains a transcript, a summary, and a link back to guidance that may help the clinician check what was discussed. This provides a practical basis for evaluating whether an offline workflow can support useful clinical documentation without relying on cloud services.
 
 Running the full pipeline locally introduces its own problems. Large language models are expensive to run. All models must be fast to load and infer enabled by an adequately designed concurrent pipeline ensuring the application remains responsive. Retrieval and summarisation has to be fast, otherwise it becomes one more waiting step in an already busy workflow. The system also has to fit into the constraints of the target platform, a native Windows Store application built with the MSIX packaged project platform and deployed as an MSIX package on Intel AI PC hardware.
 
@@ -39,7 +39,7 @@ These goals are intentionally narrower than the long-term ambitions of the produ
 \section{Development Methodology}
 This project was set out with two phases, feasibility followed by iterative development on a 1 week cycle. Initially a feasibility study was conducted to determine whether latency and accuracy within the summarisation pipeline could remain within the requirement specification. This involved testing candidate models by measuring inference times, and evaluating performance on a summarisation benchmark.
 
-Development began once technical this feasibility study concluded. Weekly meetings with my external supervisor and regular discussion with my internal supervisor and the NHS clients expanded the small starting feature pool. The initial requirements were loose, only needing the summarisation on device. Through demonstrations and feedback collection, these were expanded to include AVT, medical guidance and appraisal entries. The video demonstrations further verified alignment on the implementation of new requirements and promoted the project to potential clients including Dell, HP, Intel and the NHS. 
+Development began once technical this feasibility study concluded. Weekly meetings with my external supervisor and regular discussion with my internal supervisor and the NHS clients expanded the small starting feature pool. The original requirements were deliberately narrow, focusing only on local summarisation. Through demonstrations and feedback collection, the scope broadened to include AVT, medical guidance retrieval, and appraisal entries. 
 
 The project is maintained on GitHub, which makes it practical to isolate experiments, preserve stable versions for demonstrations, and revert changes when a promising approach had flaws that required a reset to fix. This mattered most when integrating several highly linked libraries simultaneously with very different potential points of failure.
 
@@ -52,10 +52,8 @@ Chapter 2 reviews the background to the project, surveys comparable systems, and
 
 Chapter 3 defines the project requirements in detail and analyses the consequences of those requirements for the system architecture, data model, workflows, and stakeholder responsibilities.
 
-Chapter 4 describes the design of the application, including the structure of the main components and the reasoning behind the major architectural decisions.
+Chapter 4 describes the design and implementation of the application, including the structure of the main components and the reasoning behind the architectural decisions.
 
-Chapter 5 explains the implementation of the system and discusses how the design was realised in code.
+Chapter 5 presents the testing strategy, summarises the evidence gathered during development, and identifies the main limitations of the current proof of concept.
 
-Chapter 6 presents the testing and evaluation strategy, summarises the evidence gathered during development, and identifies the main limitations of the current proof of concept.
-
-Chapter 7 concludes the report by reviewing the project against its original goals, critically evaluating the resulting system, and outlining the most important directions for future work.
+Chapter 6 reviews the project against its original goals, critically evaluates the resulting system, and outlines the most important directions for future work.

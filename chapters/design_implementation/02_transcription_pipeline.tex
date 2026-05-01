@@ -1,4 +1,5 @@
 \section{Transcription Pipeline}
+This section covers the audio-transcription pipeline and the connection to the summarisation pipeline. After the implementation of this section, the pilot release of the application was demonstrated to stakeholders
 \subsection{Design}
 \subsubsection{Concurrency}
 The design of the transcription pipeline was created based on the parameters of the transcription and diarisation model. The \texttt{Whisper} family of models cannot natively transcribe live text, therefore I present this architecture.  First, the pipeline is loaded into memory in a new thread with the transcription and diarisation models loading onto the CPU. The thread signals to the UI thread upon completion. Once a signal from the UI thread is received to start, the following loop executed
